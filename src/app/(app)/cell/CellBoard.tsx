@@ -60,6 +60,7 @@ export function CellBoard({ goals, tasks, tz, forgotten, archived }: { goals: Go
 
       <div className="mt-6 grid gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0">
+      <TourCard />
       <QuickAdd tz={tz} />
       <Forgotten goals={goals.filter((g) => forgotten.includes(g.id))} onArchive={archive} />
 
@@ -139,6 +140,24 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
         </div>
       )}
     </li>
+  );
+}
+
+/** Points new people to the tutorial until they've read some of it or said no thanks. */
+function TourCard() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(!localStorage.getItem("hive-tour-dismissed") && JSON.parse(localStorage.getItem("hive-tutorial-read") ?? "[]").length < 3));
+    return () => clearTimeout(t);
+  }, []);
+  if (!show) return null;
+  return (
+    <section aria-label="Tutorial" className="mb-6 flex flex-wrap items-center gap-4 rounded-[var(--radius)] border border-line bg-surface p-4">
+      <Bee pose="wave" size={48} className="shrink-0" />
+      <p className="min-w-0 flex-1 basis-56"><span className="font-semibold">New here?</span> <span className="text-muted">Take the short tour: goals, tasks, the calendar and how team reminders work.</span></p>
+      <Link href="/tutorial" className="inline-flex min-h-11 items-center rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover">Take the tour</Link>
+      <button type="button" onClick={() => { localStorage.setItem("hive-tour-dismissed", "1"); setShow(false); }} className="min-h-11 px-2 text-sm text-muted hover:text-ink">No thanks</button>
+    </section>
   );
 }
 

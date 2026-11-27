@@ -22,6 +22,13 @@
       "when": 1795779948067,
       "tag": "0002_assignment_notified",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795788698430,
+      "tag": "0003_profile",
+      "breakpoints": true
     }
   ]
 }

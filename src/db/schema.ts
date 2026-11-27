@@ -1,6 +1,8 @@
 import {
-  boolean, index, integer, jsonb, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, type AnyPgColumn,
+  boolean, customType, index, integer, jsonb, pgEnum, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
 import type { ThemeSettings } from "@/lib/themes";
 
 const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
@@ -20,7 +22,17 @@ export const user = pgTable("user", {
   theme: jsonb("theme").$type<ThemeSettings>(),
   icsToken: text("ics_token").unique(),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
+  bio: text("bio"),
 });
+
+// Profile picture and banner, already resized and re-encoded to WebP on upload (small enough for Postgres).
+export const imageKind = pgEnum("image_kind", ["avatar", "banner"]);
+export const userImage = pgTable("user_image", {
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  kind: imageKind("kind").notNull(),
+  data: bytea("data").notNull(),
+  updatedAt: updated(),
+}, (t) => [primaryKey({ columns: [t.userId, t.kind] })]);
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),

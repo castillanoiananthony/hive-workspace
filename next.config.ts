@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // profile pictures: the browser shrinks them first; Vercel rejects request bodies over 4.5 MB anyway
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   // one address for everyone, so sign-in cookies and links all live on hive-workspace.com
   async redirects() {
     return [{ source: "/:path*", has: [{ type: "host", value: "www.hive-workspace.com" }], destination: "https://hive-workspace.com/:path*", permanent: true }];

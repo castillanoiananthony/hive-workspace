@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Bee } from "@/components/brand/Bee";
-import { Logo } from "@/components/brand/Logo";
+import { PublicTopBar } from "@/components/app/PublicTopBar";
 
 export const metadata: Metadata = { title: "Meet the developer" };
 
@@ -40,7 +39,7 @@ export default function DeveloperPage() {
     <main className="relative min-h-screen overflow-hidden">
       <div aria-hidden className="honeycomb honeycomb-layer" />
       <div className="relative mx-auto max-w-4xl px-5 py-10 sm:px-8 sm:py-14">
-        <Link href="/" className="inline-flex min-h-11 items-center"><Logo size={28} /></Link>
+        <PublicTopBar />
 
         <section className="mt-10 grid items-center gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
           <Bee pose="wave" size={260} face="/dev/ian.webp" animate title="Ian as the HIVE-WORKSPACE bee" className="mx-auto" />
