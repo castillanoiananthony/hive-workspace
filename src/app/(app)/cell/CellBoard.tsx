@@ -134,8 +134,8 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
           )}
           {own.length > 0 && <ul className="mt-2 grid gap-1">{own.map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>}
           {/* a line, then the goal's actions as icons (each has a name for screen readers and a tooltip) */}
-          <div role="toolbar" aria-label={`Actions for ${g.title}`} className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-            <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} title="Add task" className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius)] border border-accent-edge/70 px-3 text-sm font-medium text-accent-text hover:bg-accent/10"><GoalIcon d="M12 5v14M5 12h14" />Task</button>
+          <div role="toolbar" aria-label={`Actions for ${g.title}`} className="mt-3 flex gap-1.5 border-t border-line pt-3 sm:gap-2">
+            <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} title="Add task" className="inline-flex h-10 min-w-0 flex-[1.7] items-center justify-center gap-1 rounded-[var(--radius)] border border-accent-edge/70 px-1 text-sm font-medium text-accent-text hover:bg-accent/10"><GoalIcon d="M12 5v14M5 12h14" />Task</button>
             {canHaveChildren && <IconBtn label={`Add ${g.level === "year" ? "month" : "week"} goal`} onClick={() => onAddChild(g)}><polygon points="12,3.5 19.4,7.75 19.4,16.25 12,20.5 4.6,16.25 4.6,7.75" /><path d="M12 9v6M9 12h6" /></IconBtn>}
             <IconBtn label="Edit goal" onClick={() => onEdit(g)}><path d="M4 20l1.2-4.4L16 4.8l3.2 3.2L8.4 18.8z" /><path d="M13.5 7.3l3.2 3.2" /></IconBtn>
             <IconBtn label="Archive goal" onClick={() => onArchive(g)}><rect x="3" y="4" width="18" height="5" rx="1" /><path d="M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9M10 13h4" /></IconBtn>
@@ -309,15 +309,15 @@ export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label
 }
 
 function GoalIcon({ d }: { d: string }) {
-  return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={d} /></svg>;
+  return <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden className="shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={d} /></svg>;
 }
 
 /** A square icon button with a tooltip and a spoken name. */
 function IconBtn({ label, onClick, children, danger = false, disabled = false }: { label: string; onClick: () => void; children: React.ReactNode; danger?: boolean; disabled?: boolean }) {
   return (
     <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick}
-      className={`grid size-11 place-items-center rounded-[var(--radius)] border border-line text-muted disabled:opacity-60 ${danger ? "hover:border-danger hover:text-danger" : "hover:border-accent-edge hover:text-ink"}`}>
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+      className={`grid h-10 min-w-0 flex-1 place-items-center rounded-[var(--radius)] border border-line text-muted disabled:opacity-60 ${danger ? "hover:border-danger hover:text-danger" : "hover:border-accent-edge hover:text-ink"}`}>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
     </button>
   );
 }
