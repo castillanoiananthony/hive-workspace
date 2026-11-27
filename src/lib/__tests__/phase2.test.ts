@@ -103,3 +103,23 @@ describe("buzz scheduling", () => {
     expect(daysLeft(due, zonedToUtc("2027-03-05", "07:00", tz), tz)).toBe(0);
   });
 });
+
+import { forgottenGoals } from "../progress";
+describe("forgotten goals", () => {
+  const now = new Date("2027-03-30T00:00:00Z");
+  const ago = (d: number) => new Date(now.getTime() - d * 86400000);
+  const goal = (id: string, parentId: string | null, last: number, snoozed: number | null = null) => ({ id, parentId, lastActivityAt: ago(last), snoozedUntil: snoozed === null ? null : ago(snoozed) });
+  it("flags a goal untouched for 14+ days", () => {
+    expect(forgottenGoals([goal("a", null, 20), goal("b", null, 3)], [], new Map(), now)).toEqual(["a"]);
+  });
+  it("counts activity in tasks and smaller goals", () => {
+    const goals = [goal("y", null, 40), goal("m", "y", 30)];
+    expect(forgottenGoals(goals, [{ goalId: "m", updatedAt: ago(2) }], new Map(), now)).toEqual([]);
+    expect(forgottenGoals(goals, [{ goalId: "m", updatedAt: ago(20) }], new Map(), now)).toEqual(["y"]); // only the top of the branch
+  });
+  it("skips finished and snoozed goals", () => {
+    expect(forgottenGoals([goal("a", null, 20)], [], new Map([["a", 100]]), now)).toEqual([]);
+    expect(forgottenGoals([goal("a", null, 20, -3)], [], new Map(), now)).toEqual([]); // snoozed until 3 days from now
+    expect(forgottenGoals([goal("a", null, 20, 1)], [], new Map(), now)).toEqual(["a"]); // snooze ended yesterday
+  });
+});

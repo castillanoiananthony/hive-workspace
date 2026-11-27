@@ -8,7 +8,7 @@ function check(preset: PresetId, accent?: string) {
     text: ratio(v["--text"], v["--surface"]),
     textOnBg: ratio(v["--text"], v["--bg"]),
     muted: ratio(v["--text-muted"], v["--surface"]),
-    accentText: ratio(v["--accent-text"], v["--surface"]),
+    accentText: Math.min(ratio(v["--accent-text"], v["--surface"]), ratio(v["--accent-text"], v["--bg"])),
     onAccent: ratio(v["--on-accent"], v["--accent"]),
     onAccentHover: ratio(v["--on-accent"], v["--accent-hover"]),
     accentFill: ratio(v["--accent-edge"], v["--bg"]),

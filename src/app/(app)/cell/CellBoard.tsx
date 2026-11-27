@@ -7,7 +7,8 @@ import { UndoBar, type Undo } from "@/components/app/UndoBar";
 import { HexProgress } from "@/components/brand/HexProgress";
 import { formatDue } from "@/lib/dates";
 import { parseQuickAdd } from "@/lib/quickadd";
-import { archiveGoal, newTask, quickAddTask, restoreTask, setTaskStatus } from "./actions";
+import { archiveGoal, deleteGoal, newTask, quickAddTask, restoreTask, setTaskStatus, snoozeGoal } from "./actions";
+import { Bee } from "@/components/brand/Bee";
 import { GoalDialog, type GoalDialogMode } from "./GoalDialog";
 
 export type GoalView = { id: string; title: string; level: "year" | "month" | "week"; parentId: string | null; period: string; manualProgress: number; done: boolean; progress: number };
@@ -15,7 +16,7 @@ export type TaskView = { id: string; title: string; status: "todo" | "doing" | "
 
 const LEVEL = { year: "Year goal", month: "Month goal", week: "Week goal" } as const;
 
-export function CellBoard({ goals, tasks, tz }: { goals: GoalView[]; tasks: TaskView[]; tz: string }) {
+export function CellBoard({ goals, tasks, tz, forgotten, archived }: { goals: GoalView[]; tasks: TaskView[]; tz: string; forgotten: string[]; archived: { id: string; title: string; level: string }[] }) {
   const [dialog, setDialog] = useState<GoalDialogMode | null>(null);
   const [undo, setUndo] = useState<Undo>(null);
   const [, start] = useTransition();
@@ -60,6 +61,7 @@ export function CellBoard({ goals, tasks, tz }: { goals: GoalView[]; tasks: Task
       <div className="mt-6 grid gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0">
       <QuickAdd tz={tz} />
+      <Forgotten goals={goals.filter((g) => forgotten.includes(g.id))} onArchive={archive} />
 
       <section aria-labelledby="ladder" className="mt-8">
         <h2 id="ladder" className="sr-only">Goal ladder</h2>
@@ -84,6 +86,7 @@ export function CellBoard({ goals, tasks, tz }: { goals: GoalView[]; tasks: Task
           <ul className="mt-3 grid gap-1">{loose.map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>
         </section>
       )}
+      {archived.length > 0 && <Archived goals={archived} />}
       </div>
       <UpNext tasks={tasks} tz={tz} />
       </div>
@@ -139,6 +142,55 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
   );
 }
 
+/** Gentle nudge for goals nobody has touched in 14 days. "Not now" hides it until tomorrow. */
+function Forgotten({ goals, onArchive }: { goals: GoalView[]; onArchive: (g: GoalView) => void }) {
+  const [hiddenOn, setHiddenOn] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const today = new Date().toDateString();
+  useEffect(() => { const t = setTimeout(() => setHiddenOn(localStorage.getItem("hive-forgotten-hidden"))); return () => clearTimeout(t); }, []);
+  if (goals.length === 0 || hiddenOn === today) return null;
+  return (
+    <section aria-labelledby="forgotten-h" className="mt-6 flex gap-4 rounded-[var(--radius)] border border-accent-edge/60 bg-surface p-5">
+      <Bee pose="sleep" size={64} className="hidden shrink-0 sm:block" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="forgotten-h" className="font-display text-lg font-semibold">These goals haven&apos;t moved in a while</h2>
+          <button type="button" onClick={() => { localStorage.setItem("hive-forgotten-hidden", today); setHiddenOn(today); }} className="min-h-11 shrink-0 px-2 text-sm text-muted hover:text-ink">Not now</button>
+        </div>
+        <p className="text-sm text-muted">Nothing has changed on them for two weeks. Plan one small step, give them a week, or put them away.</p>
+        <ul className="mt-3 grid gap-3">
+          {goals.map((g) => (
+            <li key={g.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="min-w-0 flex-1 basis-56 font-medium">{g.title}</span>
+              <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} className="min-h-11 rounded-[var(--radius)] bg-accent px-3 text-sm font-semibold text-on-accent hover:bg-accent-hover">Plan a task</button>
+              <button type="button" disabled={pending} onClick={() => start(() => snoozeGoal(g.id))} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium hover:border-accent-edge">Snooze 1 week</button>
+              <button type="button" disabled={pending} onClick={() => onArchive(g)} className="min-h-11 px-3 text-sm text-muted hover:text-ink">Archive</button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function Archived({ goals }: { goals: { id: string; title: string; level: string }[] }) {
+  const [pending, start] = useTransition();
+  return (
+    <details className="mt-10 rounded-[var(--radius)] border border-line">
+      <summary className="min-h-11 cursor-pointer content-center px-4 font-medium text-muted">Archived goals ({goals.length})</summary>
+      <ul className="divide-y divide-line border-t border-line">
+        {goals.map((g) => (
+          <li key={g.id} className="flex flex-wrap items-center gap-2 px-4 py-2">
+            <span className="min-w-0 flex-1">{g.title} <span className="text-sm text-muted">({g.level})</span></span>
+            <button type="button" disabled={pending} onClick={() => start(() => archiveGoal(g.id, true))} className="min-h-11 px-2 text-sm font-medium text-accent-text">Restore</button>
+            <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete “${g.title}” for good? Its tasks stay, without a goal. This can't be undone.`)) start(() => deleteGoal(g.id)); }} className="min-h-11 px-2 text-sm text-muted hover:text-danger">Delete for good</button>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 /** Right-hand column on wide screens (below the ladder on narrow ones): overdue and due-this-week tasks. */
 function UpNext({ tasks, tz }: { tasks: TaskView[]; tz: string }) {
   const [now] = useState(() => Date.now());
@@ -153,7 +205,7 @@ function UpNext({ tasks, tz }: { tasks: TaskView[]; tz: string }) {
       {soon.length === 0
         ? <p className="mt-4 text-muted">Nothing due this week. Add a date to a task and it shows up here.</p>
         : <ul className="mt-3 grid gap-1">{soon.map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>}
-      <p className="mt-5 border-t border-line pt-4 text-sm text-muted">{doneCount} of {tasks.length} tasks done in total.</p>
+      <p className="mt-5 border-t border-line pt-4 text-sm text-muted">{doneCount} of {tasks.length} {tasks.length === 1 ? "task" : "tasks"} done in total.</p>
     </aside>
   );
 }

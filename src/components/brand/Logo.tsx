@@ -27,7 +27,7 @@ export function LogoMark({ size = 32, title }: { size?: number; title?: string }
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
-    <span className="inline-flex items-center gap-2.5" aria-label="HIVE-WORKSPACE">
+    <span className="inline-flex items-center gap-2.5" role="img" aria-label="HIVE-WORKSPACE">
       <LogoMark size={size} />
       <span className="font-display font-semibold tracking-[0.01em] text-[var(--text)]" style={{ fontSize: `${(size * 0.62) / 16}rem` }} /* rem so it follows the text size setting */ aria-hidden>
         HIVE<span className="text-[var(--text-muted)]">-</span>WORKSPACE

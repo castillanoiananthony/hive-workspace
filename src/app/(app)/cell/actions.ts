@@ -73,6 +73,23 @@ export async function archiveGoal(id: string, restore = false) {
   revalidatePath("/cell");
 }
 
+/** "Snooze 1 week" on the forgotten-goals card. */
+export async function snoozeGoal(id: string, days = 7) {
+  const me = await requireUser();
+  await ownGoal(me.id, id);
+  await db.update(goal).set({ snoozedUntil: new Date(Date.now() + days * 86400000) }).where(eq(goal.id, id));
+  revalidatePath("/cell");
+}
+
+/** Permanent delete, only for archived goals (the page asks first). Its tasks stay, without a goal. */
+export async function deleteGoal(id: string) {
+  const me = await requireUser();
+  const g = (await ownGoal(me.id, id))!;
+  if (!g.archivedAt) throw new Error("Archive a goal before deleting it.");
+  await db.delete(goal).where(eq(goal.id, id));
+  revalidatePath("/cell");
+}
+
 // ---------- tasks ----------
 
 export async function quickAddTask(input: string, goalId: string | null = null) {

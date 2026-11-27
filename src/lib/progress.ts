@@ -36,3 +36,32 @@ export function wouldCycle(goals: { id: string; parentId: string | null }[], id:
   for (let cur = parentId, hops = 0; cur && hops < 100; cur = byId.get(cur) ?? null, hops++) if (cur === id) return true;
   return false;
 }
+
+export type ActivityGoal = { id: string; parentId: string | null; lastActivityAt: Date; snoozedUntil: Date | null };
+export type ActivityTask = { goalId: string | null; updatedAt: Date };
+
+/**
+ * Goals that haven't moved in `days`: the goal itself, its tasks and every smaller goal under it all unchanged.
+ * Finished (100%) and snoozed goals are left alone.
+ */
+export function forgottenGoals(goals: ActivityGoal[], tasks: ActivityTask[], progress: Map<string, number>, now: Date, days = 14): string[] {
+  const cutoff = now.getTime() - days * 86400000;
+  const latest = new Map<string, number>();
+  const kids = new Map<string, ActivityGoal[]>();
+  for (const g of goals) if (g.parentId) kids.set(g.parentId, [...(kids.get(g.parentId) ?? []), g]);
+  const seen = new Set<string>();
+  const walk = (g: ActivityGoal): number => {
+    if (latest.has(g.id)) return latest.get(g.id)!;
+    if (seen.has(g.id)) return 0;
+    seen.add(g.id);
+    const own = Math.max(g.lastActivityAt.getTime(), ...tasks.filter((t) => t.goalId === g.id).map((t) => t.updatedAt.getTime()));
+    const value = Math.max(own, ...(kids.get(g.id) ?? []).map(walk));
+    latest.set(g.id, value);
+    return value;
+  };
+  return goals
+    .filter((g) => walk(g) < cutoff && (progress.get(g.id) ?? 0) < 100 && !(g.snoozedUntil && g.snoozedUntil.getTime() > now.getTime()))
+    // only the biggest forgotten goal in a branch, so one stale year goal doesn't list all its months too
+    .filter((g, _, all) => !all.some((p) => p.id === g.parentId))
+    .map((g) => g.id);
+}

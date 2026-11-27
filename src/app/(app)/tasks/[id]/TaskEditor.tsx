@@ -122,6 +122,7 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
         </p>
       </div>
 
+      <h1 className="sr-only">{doc.title || "Untitled task"}</h1>
       <label htmlFor="task-title" className="sr-only">Task title</label>
       <textarea
         id="task-title" rows={1} value={doc.title} placeholder="Untitled task" maxLength={200}
@@ -275,8 +276,11 @@ function AddRow({ placeholder, label, onAdd }: { placeholder: string; label: str
 
 function Toolbar({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) {
   const btn = (label: string, title: string, active: boolean, run: () => void) => (
-    <button type="button" title={title} aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={run}
-      className="grid size-11 place-items-center rounded-[var(--radius)] text-sm font-semibold text-muted hover:text-ink aria-pressed:bg-raised aria-pressed:text-ink">{label}</button>
+    <button type="button" title={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={run}
+      className="grid size-11 place-items-center rounded-[var(--radius)] text-sm font-semibold text-muted hover:text-ink aria-pressed:bg-raised aria-pressed:text-ink">
+      {/* the symbol is for eyes; screen readers hear the word */}
+      <span aria-hidden>{label}</span><span className="sr-only">{title}</span>
+    </button>
   );
   function link() {
     const prev = editor.getAttributes("link").href as string | undefined;

@@ -78,7 +78,8 @@ export function themeVars(preset: PresetId, accentOverride?: string | null): Rec
     "--accent-hover": shade(accent, ink === "#FFFFFF" ? -0.15 : 0.2),
     "--accent-deep": shade(accent, -0.2),
     "--on-accent": ink,
-    "--accent-text": fit(raw, p.surface, 4.5),
+    // readable on both the page background and panels
+    "--accent-text": fit(fit(raw, p.surface, 4.5), p.bg, 4.5),
     "--success": p.success, "--danger": p.danger,
     "color-scheme": p.scheme,
   };
