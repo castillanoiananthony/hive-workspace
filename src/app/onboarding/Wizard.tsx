@@ -1,4 +1,5 @@
 "use client";
+import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Bee, type BeePose } from "@/components/brand/Bee";
 import { Logo } from "@/components/brand/Logo";
@@ -40,6 +41,7 @@ export function Wizard({ firstName }: { firstName: string }) {
         if (step === 2) { await createFirstTeam(value); await finishOnboarding(); return; }
         setStep(step + 1);
       } catch (err) {
+        unstable_rethrow(err); // finishOnboarding() redirects; that is not an error
         setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
       }
     });

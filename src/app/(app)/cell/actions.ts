@@ -1,9 +1,10 @@
 "use server";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { checklistItem, goal, task, taskLink } from "@/db/schema";
+import { assignment, checklistItem, goal, task, taskLink, team, teamMember } from "@/db/schema";
+import { newToken } from "@/lib/tokens";
 import { periodFor, zonedToUtc } from "@/lib/dates";
 import { wouldCycle } from "@/lib/progress";
 import { parseQuickAdd } from "@/lib/quickadd";
@@ -20,11 +21,11 @@ async function ownGoal(userId: string, id: string | null | undefined) {
   return row;
 }
 
+/** A personal task you own, or a task in a team you own. */
 async function ownTask(userId: string, id: string) {
-  // shortcut: personal tasks only; Phase 4 lets team owners edit their team's tasks here too
-  const [row] = await db.select().from(task).where(and(eq(task.id, id), eq(task.ownerId, userId), isNull(task.teamId)));
-  if (!row) throw new Error("That task no longer exists.");
-  return row;
+  const [hit] = await db.select({ t: task, teamOwner: team.ownerId }).from(task).leftJoin(team, eq(task.teamId, team.id)).where(eq(task.id, id));
+  if (!hit || (hit.t.teamId ? hit.teamOwner !== userId : hit.t.ownerId !== userId)) throw new Error("That task no longer exists.");
+  return hit.t;
 }
 
 const touchGoal = (id: string | null) => (id ? db.update(goal).set({ lastActivityAt: new Date() }).where(eq(goal.id, id)) : null);
@@ -110,6 +111,8 @@ export type TaskDoc = {
   goalId: string | null;
   checklist: { text: string; done: boolean }[];
   links: { title: string; url: string }[];
+  howTo?: unknown; // team tasks: "How to do it"
+  assignees?: string[]; // team tasks: roster member ids
 };
 
 const safeUrl = (u: string) => {
@@ -125,7 +128,7 @@ const safeUrl = (u: string) => {
 export async function saveTask(id: string, doc: TaskDoc) {
   const me = await requireUser();
   const before = await ownTask(me.id, id);
-  const parent = await ownGoal(me.id, doc.goalId);
+  const parent = before.teamId ? null : await ownGoal(me.id, doc.goalId); // team tasks don't sit in personal goals
   const dueAt = doc.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(doc.dueDate) ? zonedToUtc(doc.dueDate, doc.dueTime && /^\d{2}:\d{2}$/.test(doc.dueTime) ? doc.dueTime : null, me.timezone) : null;
   const checklist = doc.checklist.slice(0, 100).map((c, i) => ({ taskId: id, text: text(c.text, 300), done: Boolean(c.done), position: i })).filter((c) => c.text);
   const links = doc.links.slice(0, 50).flatMap((l, i) => {
@@ -136,7 +139,18 @@ export async function saveTask(id: string, doc: TaskDoc) {
     await tx.update(task).set({
       title: text(doc.title), notes: doc.notes ?? null, status: ["todo", "doing", "done"].includes(doc.status) ? doc.status : "todo",
       dueAt, hasTime: Boolean(dueAt && doc.dueTime), goalId: parent?.id ?? null,
+      ...(before.teamId ? { howTo: doc.howTo ?? null } : {}),
     }).where(eq(task.id, id));
+    if (before.teamId && doc.assignees) {
+      // keep existing assignments (their done state and email links), add new ones, drop removed ones
+      const roster = await tx.select({ id: teamMember.id }).from(teamMember).where(eq(teamMember.teamId, before.teamId));
+      const wanted = new Set(doc.assignees.filter((m) => roster.some((r) => r.id === m)));
+      const current = await tx.select({ id: assignment.id, memberId: assignment.memberId }).from(assignment).where(eq(assignment.taskId, id));
+      const drop = current.filter((a) => !wanted.has(a.memberId)).map((a) => a.id);
+      if (drop.length) await tx.delete(assignment).where(inArray(assignment.id, drop));
+      const add = [...wanted].filter((m) => !current.some((a) => a.memberId === m));
+      if (add.length) await tx.insert(assignment).values(add.map((memberId) => ({ taskId: id, memberId, doneTokenHash: newToken().hash })));
+    }
     await tx.delete(checklistItem).where(eq(checklistItem.taskId, id));
     if (checklist.length) await tx.insert(checklistItem).values(checklist);
     await tx.delete(taskLink).where(eq(taskLink.taskId, id));
@@ -151,28 +165,40 @@ export async function saveTask(id: string, doc: TaskDoc) {
 export async function deleteTask(id: string) {
   const me = await requireUser();
   const t = await ownTask(me.id, id);
-  const [items, links] = await Promise.all([
+  const [items, links, assigned] = await Promise.all([
     db.select().from(checklistItem).where(eq(checklistItem.taskId, id)),
     db.select().from(taskLink).where(eq(taskLink.taskId, id)),
+    db.select({ memberId: assignment.memberId, doneAt: assignment.doneAt }).from(assignment).where(eq(assignment.taskId, id)),
   ]);
   await db.delete(task).where(eq(task.id, id));
   await touchGoal(t.goalId);
   revalidatePath("/cell");
+  if (t.teamId) revalidatePath(`/hive/${t.teamId}`);
   // handed back to the page so "Undo" can put everything back
-  return { task: t, items, links };
+  return { task: t, items, links, assigned };
 }
 
 export async function restoreTask(snapshot: Awaited<ReturnType<typeof deleteTask>>) {
   const me = await requireUser();
   // the snapshot comes back from the browser, so only trusted fields are re-inserted and ownership is forced
   const t = snapshot.task;
-  const parent = t.goalId ? await ownGoal(me.id, t.goalId).catch(() => null) : null;
+  // a team task can only come back into a team the user still owns
+  const teamRow = t.teamId ? (await db.select({ id: team.id }).from(team).where(and(eq(team.id, String(t.teamId)), eq(team.ownerId, me.id))))[0] : null;
+  if (t.teamId && !teamRow) throw new Error("That team no longer exists.");
+  const parent = !teamRow && t.goalId ? await ownGoal(me.id, t.goalId).catch(() => null) : null;
   const status = ["todo", "doing", "done"].includes(t.status) ? t.status : "todo";
   await db.transaction(async (tx) => {
     await tx.insert(task).values({
       id: String(t.id), ownerId: me.id, title: text(t.title), notes: t.notes ?? null, status,
       dueAt: t.dueAt ? new Date(t.dueAt) : null, hasTime: Boolean(t.hasTime), goalId: parent?.id ?? null,
+      teamId: teamRow?.id ?? null, howTo: teamRow ? t.howTo ?? null : null,
     });
+    if (teamRow && snapshot.assigned?.length) {
+      // fresh link tokens: the old ones went with the deleted rows
+      const roster = await tx.select({ id: teamMember.id }).from(teamMember).where(eq(teamMember.teamId, teamRow.id));
+      const back = snapshot.assigned.filter((a) => roster.some((r) => r.id === a.memberId));
+      if (back.length) await tx.insert(assignment).values(back.map((a) => ({ taskId: String(t.id), memberId: a.memberId, doneAt: a.doneAt ? new Date(a.doneAt) : null, doneTokenHash: newToken().hash })));
+    }
     const items = snapshot.items.slice(0, 100).map((c, i) => ({ taskId: String(t.id), text: text(c.text, 300), done: Boolean(c.done), position: i })).filter((c) => c.text);
     if (items.length) await tx.insert(checklistItem).values(items);
     const links = snapshot.links.slice(0, 50).flatMap((l, i) => { const url = safeUrl(l.url); return url ? [{ taskId: String(t.id), title: text(l.title), url, position: i }] : []; });

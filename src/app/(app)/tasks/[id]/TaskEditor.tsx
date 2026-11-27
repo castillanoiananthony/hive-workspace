@@ -7,13 +7,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { HexCheck } from "@/components/app/HexCheck";
 import { deleteTask, saveTask, type TaskDoc } from "../../cell/actions";
+import { saveAsTemplate } from "../../hive/actions";
 
 type Save = "saved" | "saving" | "unsaved" | "error";
 const STATUS: { id: TaskDoc["status"]; label: string }[] = [
   { id: "todo", label: "To do" }, { id: "doing", label: "In progress" }, { id: "done", label: "Done" },
 ];
 
-export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[] }) {
+type TeamCtx = { id: string; name: string; color: string; members: { id: string; name: string }[]; done: string[] };
+
+export function TaskEditor({ id, initial, goals, team }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null }) {
   const router = useRouter();
   const [doc, setDoc] = useState<TaskDoc>(initial);
   const [save, setSave] = useState<Save>("saved");
@@ -30,6 +33,17 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
     editorProps: { attributes: { class: "task-notes", "aria-label": "Notes", role: "textbox", "aria-multiline": "true" } },
     onUpdate: ({ editor }) => update({ notes: editor.getJSON() }),
   });
+  // team tasks get a second document: the steps teammates read in their email
+  const howTo = useEditor({
+    extensions: [StarterKit.configure({ heading: { levels: [2, 3] }, link: { openOnClick: false, autolink: true, protocols: ["http", "https", "mailto"] } }),
+      Placeholder.configure({ placeholder: "Step by step, what should your teammates do? This goes in their email." }),
+    ],
+    content: (initial.howTo as object) ?? "",
+    immediatelyRender: false,
+    editorProps: { attributes: { class: "task-notes", "aria-label": "How to do it", role: "textbox", "aria-multiline": "true" } },
+    onUpdate: ({ editor }) => update({ howTo: editor.getJSON() }),
+  });
+  const [templated, setTemplated] = useState(false);
 
   // autosave: wait for a pause in typing, then send the whole document
   function update(patch: Partial<TaskDoc>) {
@@ -61,7 +75,7 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
     if (timer.current) clearTimeout(timer.current);
     const snapshot = await deleteTask(id);
     sessionStorage.setItem("hive-undo-task", JSON.stringify(snapshot));
-    router.push("/cell");
+    router.push(team ? `/hive/${team.id}` : "/cell");
   }
 
   const field = "min-h-11 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge";
@@ -70,7 +84,7 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
   return (
     <article>
       <div className="mb-6 flex items-center justify-between gap-4 text-sm">
-        <Link href="/cell" className="min-h-11 py-2 text-muted hover:text-ink">← My Cell</Link>
+        <Link href={team ? `/hive/${team.id}` : "/cell"} className="min-h-11 py-2 text-muted hover:text-ink">← {team ? team.name : "My Cell"}</Link>
         <p aria-live="polite" className={save === "error" ? "text-danger" : "text-muted"}>
           {save === "saved" ? "Saved" : save === "saving" ? "Saving…" : save === "error" ? "Couldn't save. Check your connection." : "Unsaved changes"}
         </p>
@@ -102,19 +116,58 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
           <input id="due-time" type="time" value={doc.dueTime ?? ""} disabled={!doc.dueDate} onChange={(e) => update({ dueTime: e.target.value || null })} className={`${field} disabled:opacity-50`} />
           {doc.dueDate && <button type="button" onClick={() => update({ dueDate: null, dueTime: null })} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Clear</button>}
         </dd>
-        <dt className="self-center text-sm text-muted"><label htmlFor="goal">Goal</label></dt>
-        <dd>
-          <select id="goal" value={doc.goalId ?? ""} onChange={(e) => update({ goalId: e.target.value || null })} className={`${field} w-full`}>
-            <option value="">No goal</option>
-            {goals.map((g) => <option key={g.id} value={g.id}>{g.title} ({g.level})</option>)}
-          </select>
-        </dd>
+        {team ? (
+          <>
+            <dt className="text-sm text-muted">Assigned to</dt>
+            <dd>
+              {team.members.length === 0 ? (
+                <p className="text-sm text-muted">No members yet. <Link href={`/hive/${team.id}`} className="text-accent-text underline underline-offset-4">Add them on the team page</Link>.</p>
+              ) : (
+                <fieldset className="grid gap-1">
+                  <legend className="sr-only">Assigned to</legend>
+                  <button type="button" onClick={() => update({ assignees: doc.assignees?.length === team.members.length ? [] : team.members.map((m) => m.id) })} className="min-h-11 justify-self-start text-sm font-medium text-accent-text">
+                    {doc.assignees?.length === team.members.length ? "Clear everyone" : "Assign whole team"}
+                  </button>
+                  {team.members.map((m) => (
+                    <label key={m.id} className="flex min-h-11 items-center gap-2">
+                      <input type="checkbox" className="size-5 accent-[var(--accent)]" checked={doc.assignees?.includes(m.id) ?? false}
+                        onChange={(e) => update({ assignees: e.target.checked ? [...(doc.assignees ?? []), m.id] : (doc.assignees ?? []).filter((x) => x !== m.id) })} />
+                      <span className="flex-1">{m.name}</span>
+                      {team.done.includes(m.id) && <span className="text-sm text-success">✓ Done</span>}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
+            </dd>
+          </>
+        ) : (
+          <>
+            <dt className="self-center text-sm text-muted"><label htmlFor="goal">Goal</label></dt>
+            <dd>
+              <select id="goal" value={doc.goalId ?? ""} onChange={(e) => update({ goalId: e.target.value || null })} className={`${field} w-full`}>
+                <option value="">No goal</option>
+                {goals.map((g) => <option key={g.id} value={g.id}>{g.title} ({g.level})</option>)}
+              </select>
+            </dd>
+          </>
+        )}
       </dl>
       <div className="min-w-0 lg:col-start-1 lg:row-start-1">
 
+      {team && howTo && (
+        <section aria-labelledby="howto-h" className="mb-8">
+          <div className="flex items-baseline justify-between">
+            <h2 id="howto-h" className="font-display text-lg font-semibold">How to do it</h2>
+            <Toolbar editor={howTo} />
+          </div>
+          <p className="text-sm text-muted">Assigned teammates see this, the links and the due date in their email.</p>
+          <EditorContent editor={howTo} className="mt-3 rounded-[var(--radius)] border border-line bg-surface px-4 py-3 focus-within:border-accent-edge" />
+        </section>
+      )}
+
       <section aria-labelledby="notes-h">
         <div className="flex items-baseline justify-between">
-          <h2 id="notes-h" className="font-display text-lg font-semibold">Notes</h2>
+          <h2 id="notes-h" className="font-display text-lg font-semibold">{team ? "Private notes" : "Notes"}</h2>
           {editor && <Toolbar editor={editor} />}
         </div>
         <EditorContent editor={editor} className="mt-3 rounded-[var(--radius)] border border-line bg-surface px-4 py-3 focus-within:border-accent-edge" />
@@ -154,7 +207,15 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
       </section>
 
       <div className="mt-12 border-t border-line pt-6">
-        <button type="button" onClick={remove} className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-sm font-medium text-danger hover:border-danger">Delete task</button>
+        <div className="flex flex-wrap items-center gap-3">
+          {team && (
+            <button type="button" disabled={templated} onClick={async () => { if (timer.current) { clearTimeout(timer.current); await flush(); } await saveAsTemplate(id); setTemplated(true); }}
+              className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-sm font-medium hover:border-accent-edge disabled:opacity-60">
+              {templated ? "Saved as a template" : "Save as template"}
+            </button>
+          )}
+          <button type="button" onClick={remove} className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-sm font-medium text-danger hover:border-danger">Delete task</button>
+        </div>
       </div>
       </div>
       </div>
