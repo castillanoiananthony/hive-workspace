@@ -72,6 +72,22 @@ export default function DeveloperPage() {
           </article>
         </section>
 
+        <section aria-labelledby="support" className="mt-16 grid items-center gap-8 rounded-[var(--radius)] border border-line bg-surface p-6 sm:grid-cols-[1fr_auto] sm:p-10">
+          <div className="max-w-[52ch]">
+            <h2 id="support" className="font-display text-2xl font-semibold">Support HIVE-WORKSPACE</h2>
+            <p className="mt-3">
+              HIVE-WORKSPACE is free, ad-free for now, and built by one student. If it saves your group chat a few reminders,
+              a small tip keeps the hive running: the domain, the email sending and late-night coffee.
+            </p>
+            <p className="mt-3 text-muted">Scan the code with GCash, or any banking app that supports InstaPay QR. Thank you!</p>
+          </div>
+          <figure className="mx-auto w-64 sm:w-80">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a QR code must stay pixel-sharp, no resizing service */}
+            <img src="/dev/gcash-qr.webp" alt="GCash QR code for donations to Ian Anthony C." width={633} height={800} className="w-full rounded-[var(--radius)] bg-white p-2" />
+            <figcaption className="mt-2 text-center text-sm text-muted">GCash / InstaPay</figcaption>
+          </figure>
+        </section>
+
         <section aria-labelledby="also" className="mt-16 border-t border-line pt-8">
           <h2 id="also" className="font-display text-lg font-semibold">Along the way</h2>
           <p className="mt-2 max-w-[65ch] text-muted">
