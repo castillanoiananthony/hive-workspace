@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { and, count, eq, isNull } from "drizzle-orm";
 import { Suspense } from "react";
 import { db } from "@/db";
-import { goal, task, team } from "@/db/schema";
+import { follow, goal, task, team } from "@/db/schema";
 import { profileImages } from "@/lib/profile";
 import { inMyTeams } from "@/lib/team-sql";
 import { requireUser } from "@/lib/session";
@@ -25,17 +25,19 @@ export default function ProfilePage() {
 
 async function Profile() {
   const me = await requireUser();
-  const [images, [goals], [done], [teams]] = await Promise.all([
+  const [images, [goals], [done], [teams], [followers], [following]] = await Promise.all([
     profileImages(me.id),
     db.select({ n: count() }).from(goal).where(and(eq(goal.ownerId, me.id), isNull(goal.archivedAt))),
     db.select({ n: count() }).from(task).where(and(eq(task.ownerId, me.id), eq(task.status, "done"))),
     db.select({ n: count() }).from(team).where(inMyTeams(me.id)),
+    db.select({ n: count() }).from(follow).where(eq(follow.followingId, me.id)),
+    db.select({ n: count() }).from(follow).where(eq(follow.followerId, me.id)),
   ]);
   return (
     <ProfileView
       name={me.name} email={me.email} bio={me.bio ?? ""} avatar={images.avatar} banner={images.banner}
       since={new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: me.timezone }).format(me.createdAt)}
-      stats={{ goals: goals.n, done: done.n, teams: teams.n }}
+      stats={{ goals: goals.n, done: done.n, teams: teams.n, followers: followers.n, following: following.n }}
     />
   );
 }

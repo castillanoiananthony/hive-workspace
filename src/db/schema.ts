@@ -241,3 +241,10 @@ export const teamLink = pgTable("team_link", {
   note: text("note"),
   createdAt: created(),
 }, (t) => [index("team_link_team_idx").on(t.teamId)]);
+
+// Following: one row per "follower follows following".
+export const follow = pgTable("follow", {
+  followerId: text("follower_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  followingId: text("following_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  createdAt: created(),
+}, (t) => [primaryKey({ columns: [t.followerId, t.followingId] }), index("follow_following_idx").on(t.followingId)]);

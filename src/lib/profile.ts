@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { userImage } from "@/db/schema";
 
@@ -11,4 +11,12 @@ export async function profileImages(userId: string) {
     return r ? `/api/profile-image/${userId}/${k}?v=${r.updatedAt.getTime()}` : null;
   };
   return { avatar: url("avatar"), banner: url("banner") };
+}
+
+/** Avatar URLs for many users at once (missing = no picture). */
+export async function avatarsFor(userIds: string[]) {
+  if (!userIds.length) return new Map<string, string>();
+  const rows = await db.select({ userId: userImage.userId, updatedAt: userImage.updatedAt }).from(userImage)
+    .where(and(eq(userImage.kind, "avatar"), inArray(userImage.userId, userIds)));
+  return new Map(rows.map((r) => [r.userId, `/api/profile-image/${r.userId}/avatar?v=${r.updatedAt.getTime()}`]));
 }

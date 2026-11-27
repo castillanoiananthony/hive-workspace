@@ -65,7 +65,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
       me={{ memberId: mine.id, isAdmin: mine.isAdmin, perms: mine.isAdmin ? ALL_PERMS : mine.perms }}
       team={{ id: t.id, name: t.name, color: t.color, digestEnabled: t.digestEnabled, digestDay: t.digestDay, joinCode: can(mine, "members") ? t.joinCode : null, importanceColors: t.importanceColors ?? null, app: process.env.APP_URL ?? "http://localhost:3000" }}
       members={members.map((m) => ({
-        id: m.id, name: m.name, nickname: m.nickname, email: can(mine, "members") || m.id === mine.id ? m.email : null,
+        id: m.id, userId: m.userId, name: m.name, nickname: m.nickname, email: can(mine, "members") || m.id === mine.id ? m.email : null,
         joined: Boolean(m.userId), isAdmin: m.isAdmin, roleId: m.roleId, perms: m.isAdmin ? ALL_PERMS : m.perms, parentId: m.parentId, position: m.position,
         avatar: avatarOf(m.userId), unsubscribed: Boolean(m.unsubscribedAt),
       }))}

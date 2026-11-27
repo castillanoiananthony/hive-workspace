@@ -5,7 +5,7 @@ import { HexBadge } from "@/components/app/HexBadge";
 import { hexPoints } from "@/components/brand/Bee";
 import { Logo } from "@/components/brand/Logo";
 
-type IconName = "home" | "cell" | "hive" | "calendar" | "settings" | "learn" | "me";
+type IconName = "home" | "cell" | "hive" | "calendar" | "settings" | "learn" | "me" | "people";
 type Item = { href: string; label: string; icon: IconName; hint: string };
 
 // Main places, in the order people use them; "Learn" and settings sit apart so the first three stay obvious.
@@ -14,12 +14,13 @@ const MAIN: Item[] = [
   { href: "/cell", label: "My Cell", icon: "cell", hint: "Your goals and tasks" },
   { href: "/hive", label: "The Hive", icon: "hive", hint: "Your teams" },
   { href: "/calendar", label: "Calendar", icon: "calendar", hint: "Everything with a due date" },
+  { href: "/people", label: "People", icon: "people", hint: "Find and follow people" },
 ];
 const MORE: Item[] = [
   { href: "/tutorial", label: "Tutorial", icon: "learn", hint: "How everything works" },
   { href: "/settings", label: "Settings", icon: "settings", hint: "Theme, text size, calendar link" },
 ];
-const MOBILE: Item[] = [...MAIN, { href: "/settings", label: "Settings", icon: "settings", hint: "" }, { href: "/profile", label: "Me", icon: "me", hint: "" }]; // Tutorial and Meet the developer live under Me
+const MOBILE: Item[] = [...MAIN.filter((i) => i.href !== "/people"), { href: "/settings", label: "Settings", icon: "settings", hint: "" }, { href: "/profile", label: "Me", icon: "me", hint: "" }]; // Tutorial and Meet the developer live under Me
 
 export type Me = { name: string; email: string; avatar: string | null };
 
@@ -37,6 +38,7 @@ function Icon({ name }: { name: IconName }) {
       {name === "calendar" && <g {...common}><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M4 10h16M9 3v4M15 3v4" /></g>}
       {name === "settings" && <g {...common}><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></g>}
       {name === "learn" && <g {...common}><path d="M3 9l9-5 9 5-9 5-9-5Z" /><path d="M7 11.5V16c0 1.5 2.5 3 5 3s5-1.5 5-3v-4.5" /></g>}
+      {name === "people" && <g {...common}><circle cx="9" cy="9" r="3" /><path d="M3.5 19c.9-3 3-4.5 5.5-4.5s4.6 1.5 5.5 4.5" /><circle cx="17" cy="8" r="2.4" /><path d="M16 13.6c2.3.1 4 1.5 4.6 4" /></g>}
       {name === "me" && <g {...common}><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5" /></g>}
     </svg>
   );

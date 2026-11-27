@@ -10,7 +10,7 @@ import { shrinkImage } from "@/lib/shrink-image";
 import { removeProfileImage, updateProfile, uploadProfileImage } from "./actions";
 import { ImageAdjuster } from "./ImageAdjuster";
 
-type Props = { name: string; email: string; bio: string; avatar: string | null; banner: string | null; since: string; stats: { goals: number; done: number; teams: number } };
+type Props = { name: string; email: string; bio: string; avatar: string | null; banner: string | null; since: string; stats: { goals: number; done: number; teams: number; followers: number; following: number } };
 
 export function ProfileView(p: Props) {
   const router = useRouter();
@@ -122,7 +122,9 @@ export function ProfileView(p: Props) {
         <section aria-labelledby="about-h" className="rounded-[calc(var(--radius)*2)] border border-line bg-surface p-5 sm:p-6">
           <h2 id="about-h" className="font-display text-xl font-semibold">About you</h2>
           <p className={`mt-3 whitespace-pre-line ${p.bio ? "" : "text-muted"}`}>{p.bio || "No description yet. Tap “Edit profile” to say a little about yourself."}</p>
-          <dl className="mt-6 grid grid-cols-3 gap-3 border-t border-line pt-5 text-center">
+          <dl className="mt-6 grid grid-cols-3 gap-3 border-t border-line pt-5 text-center sm:grid-cols-5">
+            <div><dt className="text-sm text-muted"><Link href="/people" className="hover:underline">Followers</Link></dt><dd className="font-display text-2xl font-semibold">{p.stats.followers}</dd></div>
+            <div><dt className="text-sm text-muted"><Link href="/people" className="hover:underline">Following</Link></dt><dd className="font-display text-2xl font-semibold">{p.stats.following}</dd></div>
             <div><dt className="text-sm text-muted">Goals</dt><dd className="font-display text-2xl font-semibold">{p.stats.goals}</dd></div>
             <div><dt className="text-sm text-muted">Tasks done</dt><dd className="font-display text-2xl font-semibold">{p.stats.done}</dd></div>
             <div><dt className="text-sm text-muted">Teams</dt><dd className="font-display text-2xl font-semibold">{p.stats.teams}</dd></div>
@@ -130,7 +132,7 @@ export function ProfileView(p: Props) {
         </section>
 
         <nav aria-label="Account" className="self-start rounded-[calc(var(--radius)*2)] border border-line bg-surface p-2">
-          {[["/settings", "Settings", "Theme, text size, calendar link"], ["/tutorial", "Tutorial", "Learn every feature step by step"], ["/developer", "Meet the developer", "Who made HIVE-WORKSPACE"]].map(([href, label, hint]) => (
+          {[["/people", "People", "Search, visit and follow accounts"], ["/settings", "Settings", "Theme, text size, calendar link"], ["/tutorial", "Tutorial", "Learn every feature step by step"], ["/developer", "Meet the developer", "Who made HIVE-WORKSPACE"]].map(([href, label, hint]) => (
             <Link key={href} href={href} className="flex min-h-14 flex-col justify-center rounded-[var(--radius)] px-3 py-2 hover:bg-raised">
               <span className="font-medium">{label}</span><span className="text-sm text-muted">{hint}</span>
             </Link>

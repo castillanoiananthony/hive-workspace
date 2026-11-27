@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BusyOverlay } from "@/components/app/BusyOverlay";
@@ -49,8 +50,11 @@ function MemberRow({ m, team, role, canManage, me }: { m: MemberT; team: TeamT; 
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, start] = useTransition();
+  const remove = () => { if (confirm(`Remove ${nameOf(m)} from the team? Their task assignments are removed too.`)) start(async () => { await removeMember(m.id); router.refresh(); }); };
+  const ghost = "min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink";
+  const danger = "min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger";
   return (
-    <li className="flex flex-wrap items-center gap-3 p-3">
+    <li className="flex items-center gap-3 p-3">
       <MemberAvatar m={m} color={team.color} size={40} />
       <div className="min-w-0 flex-1">
         {editing ? (
@@ -61,15 +65,32 @@ function MemberRow({ m, team, role, canManage, me }: { m: MemberT; team: TeamT; 
           </form>
         ) : (
           <>
-            <p className="font-medium [overflow-wrap:anywhere]">{nameOf(m)}{m.nickname && <span className="font-normal text-muted"> ({m.name})</span>}{m.id === me.memberId && <span className="font-normal text-muted"> (you)</span>}</p>
+            <p className="font-medium [overflow-wrap:anywhere]">
+              {m.userId ? <Link href={m.id === me.memberId ? "/profile" : `/u/${m.userId}`} className="hover:underline">{nameOf(m)}</Link> : nameOf(m)}
+              {m.nickname && <span className="font-normal text-muted"> ({m.name})</span>}{m.id === me.memberId && <span className="font-normal text-muted"> (you)</span>}
+            </p>
             <p className="truncate text-sm text-muted">{role}{m.email ? `, ${m.email}` : ""}{m.unsubscribed ? ". Turned off Buzz emails" : ""}</p>
           </>
         )}
       </div>
-      {canManage && !editing && <button type="button" onClick={() => setEditing(true)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">Rename</button>}
-      {canManage && !m.isAdmin && (
-        <button type="button" disabled={pending} onClick={() => { if (confirm(`Remove ${nameOf(m)} from the team? Their task assignments are removed too.`)) start(async () => { await removeMember(m.id); router.refresh(); }); }}
-          className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Remove</button>
+      {canManage && !editing && (
+        <>
+          {/* wide screens: the buttons; phones: one ⋯ menu so the name keeps its room */}
+          <div className="hidden gap-2 sm:flex">
+            <button type="button" onClick={() => setEditing(true)} className={ghost}>Rename</button>
+            {!m.isAdmin && <button type="button" disabled={pending} onClick={remove} className={danger}>Remove</button>}
+          </div>
+          <details className="relative sm:hidden">
+            <summary aria-label={`Options for ${nameOf(m)}`} className="grid size-11 cursor-pointer list-none place-items-center rounded-full border border-line text-muted hover:border-accent-edge hover:text-ink [&::-webkit-details-marker]:hidden">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 grid w-44 gap-1 rounded-[var(--radius)] border border-line bg-raised p-1 shadow-2xl">
+              {m.userId && <Link href={`/u/${m.userId}`} className="flex min-h-11 items-center rounded-[calc(var(--radius)-4px)] px-3 hover:bg-surface">View profile</Link>}
+              <button type="button" onClick={(e) => { e.currentTarget.closest("details")?.removeAttribute("open"); setEditing(true); }} className="flex min-h-11 items-center rounded-[calc(var(--radius)-4px)] px-3 text-left hover:bg-surface">Rename</button>
+              {!m.isAdmin && <button type="button" disabled={pending} onClick={remove} className="flex min-h-11 items-center rounded-[calc(var(--radius)-4px)] px-3 text-left text-danger hover:bg-surface">Remove from team</button>}
+            </div>
+          </details>
+        </>
       )}
     </li>
   );
