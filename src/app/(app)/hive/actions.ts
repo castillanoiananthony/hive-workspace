@@ -9,6 +9,7 @@ import { requireUser } from "@/lib/session";
 import { ownTeam, TEAM_COLORS } from "@/lib/teams";
 import { newToken } from "@/lib/tokens";
 import { createTeamTask } from "@/lib/team-tasks";
+import { sendPendingAssignments } from "@/lib/buzz";
 
 const text = (s: unknown, max = 200) => String(s ?? "").trim().slice(0, max);
 const color = (c: unknown) => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toUpperCase() : TEAM_COLORS[0]);
@@ -140,4 +141,15 @@ export async function deleteTemplate(id: string) {
   await ownTeam(me.id, tpl?.teamId);
   await db.delete(template).where(eq(template.id, id));
   refresh(tpl.teamId);
+}
+
+/** Emails assignees of this task who haven't been told yet. The task page calls it a minute after the last change, or on "Send now". */
+export async function sendAssignmentEmails(taskId: string) {
+  const me = await requireUser();
+  const [t] = await db.select({ teamId: task.teamId, title: task.title }).from(task).where(eq(task.id, taskId));
+  await ownTeam(me.id, t?.teamId);
+  if (!t.title.trim()) throw new Error("Give the task a title before emailing it.");
+  const sent = await sendPendingAssignments(taskId);
+  refresh(t.teamId!);
+  return sent;
 }

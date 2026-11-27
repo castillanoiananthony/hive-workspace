@@ -55,3 +55,12 @@ export async function signOut() {
   await auth.api.signOut({ headers: await headers() });
   redirect("/login");
 }
+
+/** The name teammates see in Buzz emails ("Ian assigned you a task"). */
+export async function updateName(name: string) {
+  const me = await requireUser();
+  const n = clean(name, 80);
+  if (!n) throw new Error("Type the name your teammates know you by.");
+  await db.update(user).set({ name: n }).where(eq(user.id, me.id));
+  revalidatePath("/settings");
+}

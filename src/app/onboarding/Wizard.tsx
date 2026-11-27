@@ -3,7 +3,7 @@ import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Bee, type BeePose } from "@/components/brand/Bee";
 import { Logo } from "@/components/brand/Logo";
-import { createFirstGoal, createFirstTask, createFirstTeam, finishOnboarding } from "../(app)/actions";
+import { createFirstGoal, createFirstTask, createFirstTeam, finishOnboarding, updateName } from "../(app)/actions";
 
 const STEPS: { pose: BeePose; title: string; body: string; label: string; sample: string; button: string }[] = [
   {
@@ -32,10 +32,12 @@ export function Wizard({ firstName }: { firstName: string }) {
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const value = String(new FormData(e.currentTarget).get("value") ?? "");
+    const form = new FormData(e.currentTarget);
+    const value = String(form.get("value") ?? "");
     setError(null);
     start(async () => {
       try {
+        if (step === 0 && !firstName) await updateName(String(form.get("name") ?? ""));
         if (step === 0) setGoalId(await createFirstGoal(value));
         if (step === 1) await createFirstTask(value, goalId);
         if (step === 2) { await createFirstTeam(value); await finishOnboarding(); return; }
@@ -64,9 +66,16 @@ export function Wizard({ firstName }: { firstName: string }) {
         <p className="mt-2 text-muted">{s.body}</p>
 
         <form key={step} onSubmit={submit} className="mt-6 grid gap-3">
+          {step === 0 && !firstName && (
+            <>
+              <label htmlFor="name" className="text-sm font-medium">Your name</label>
+              <input id="name" name="name" required maxLength={80} autoComplete="name" placeholder="Ian Castillano" className="min-h-12 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge" aria-describedby="name-hint" />
+              <p id="name-hint" className="-mt-1 text-sm text-muted">Teammates see it in emails, like “Ian assigned you a task”.</p>
+            </>
+          )}
           <label htmlFor="value" className="text-sm font-medium">{s.label}</label>
           <input
-            id="value" name="value" required defaultValue={s.sample} maxLength={200} autoFocus
+            id="value" name="value" required defaultValue={s.sample} maxLength={200} autoFocus={step > 0 || Boolean(firstName)}
             className="min-h-12 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent"
             aria-describedby={error ? "step-error" : undefined}
           />

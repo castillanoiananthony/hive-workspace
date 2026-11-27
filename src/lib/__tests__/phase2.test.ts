@@ -85,3 +85,21 @@ describe("quick add", () => {
     expect(parseQuickAdd("Send slides by Monday", tz, now).title).toBe("Send slides");
   });
 });
+
+import { daysLeft, nextOccurrence } from "../schedule";
+describe("buzz scheduling", () => {
+  it("finds the next weekly and monthly dates", () => {
+    expect(nextOccurrence("2027-03-03", { recurrence: "weekly", weekday: 5, monthDay: null })).toBe("2027-03-05"); // Wed → Fri
+    expect(nextOccurrence("2027-03-05", { recurrence: "weekly", weekday: 5, monthDay: null })).toBe("2027-03-05"); // today counts
+    expect(nextOccurrence("2027-03-06", { recurrence: "weekly", weekday: 5, monthDay: null })).toBe("2027-03-12");
+    expect(nextOccurrence("2027-03-20", { recurrence: "monthly", weekday: null, monthDay: 15 })).toBe("2027-04-15");
+    expect(nextOccurrence("2027-12-20", { recurrence: "monthly", weekday: null, monthDay: 1 })).toBe("2028-01-01");
+  });
+  it("counts days left by the owner's calendar, not hours", () => {
+    const tz = "Asia/Manila";
+    const due = zonedToUtc("2027-03-05", null, tz); // all-day Friday (23:59)
+    expect(daysLeft(due, zonedToUtc("2027-03-04", "08:00", tz), tz)).toBe(1);
+    expect(daysLeft(due, zonedToUtc("2027-03-02", "08:00", tz), tz)).toBe(3);
+    expect(daysLeft(due, zonedToUtc("2027-03-05", "07:00", tz), tz)).toBe(0);
+  });
+});

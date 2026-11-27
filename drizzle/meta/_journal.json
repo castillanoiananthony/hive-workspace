@@ -15,6 +15,13 @@
       "when": 1795777549330,
       "tag": "0001_ics_token",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795779948067,
+      "tag": "0002_assignment_notified",
+      "breakpoints": true
     }
   ]
 }

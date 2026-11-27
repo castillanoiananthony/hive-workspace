@@ -31,7 +31,7 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
     ? {
         id: hit.team.id, name: hit.team.name, color: hit.team.color,
         members: await db.select({ id: teamMember.id, name: teamMember.name }).from(teamMember).where(eq(teamMember.teamId, t.teamId)).orderBy(asc(teamMember.name)),
-        assigned: await db.select({ memberId: assignment.memberId, doneAt: assignment.doneAt }).from(assignment).where(eq(assignment.taskId, t.id)),
+        assigned: await db.select({ memberId: assignment.memberId, doneAt: assignment.doneAt, notifiedAt: assignment.notifiedAt }).from(assignment).where(eq(assignment.taskId, t.id)),
       }
     : null;
   const [items, links, goals] = await Promise.all([
@@ -44,7 +44,7 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
     <TaskEditor
       id={t.id}
       goals={goals}
-      team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, members: teamInfo.members, done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId) }}
+      team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, members: teamInfo.members, done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
       initial={{
         title: t.title, notes: t.notes ?? null, status: t.status, goalId: t.goalId,
         dueDate: due?.date ?? null, dueTime: t.hasTime ? due!.time : null,

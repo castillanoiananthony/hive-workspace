@@ -14,13 +14,14 @@ type Task = { id: string; title: string; status: "todo" | "doing" | "done"; dueA
 type Assigned = { taskId: string; memberId: string; doneAt: string | null };
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 
-const TABS = [["board", "Tasks"], ["roster", "Roster"], ["templates", "Templates"], ["settings", "Team settings"]] as const;
+const TABS = [["board", "Tasks"], ["roster", "Roster"], ["templates", "Templates"], ["log", "Email log"], ["settings", "Team settings"]] as const;
+type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const btnPrimary = "min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60";
 const btn = "min-h-11 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-accent-edge disabled:opacity-60";
 const field = "min-h-11 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge";
 
-export function TeamView(props: { team: Team; members: Member[]; tasks: Task[]; assigned: Assigned[]; templates: Template[]; tz: string }) {
+export function TeamView(props: { team: Team; members: Member[]; tasks: Task[]; assigned: Assigned[]; templates: Template[]; log: LogRow[]; tz: string }) {
   const { team, members, tasks } = props;
   const [tab, setTab] = useState<(typeof TABS)[number][0]>(members.length ? "board" : "roster");
   const [pending, start] = useTransition();
@@ -49,6 +50,7 @@ export function TeamView(props: { team: Team; members: Member[]; tasks: Task[]; 
         {tab === "board" && <Board {...props} onRoster={() => setTab("roster")} />}
         {tab === "roster" && <Roster team={team} members={members} />}
         {tab === "templates" && <Templates team={team} members={members} templates={props.templates} />}
+        {tab === "log" && <EmailLog log={props.log} tz={props.tz} />}
         {tab === "settings" && <Settings team={team} />}
       </div>
     </>
@@ -284,6 +286,36 @@ function Recurrence({ template: t, members }: { template: Template; members: Mem
         <p role="status" className="text-sm text-muted">{saved}</p>
       </div>
     </form>
+  );
+}
+
+// ---------- email log ----------
+
+const KIND = { assign: "New task", remind3: "Reminder", remind1: "Last reminder", digest: "Weekly digest" } as const;
+
+function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
+  if (log.length === 0) return <EmptyState pose="fly" title="No emails yet" body="Every Buzz email this team sends shows up here: who got it, what it was, when, and whether it went through." />;
+  const when = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-line">
+      <table className="w-full border-collapse text-left">
+        <caption className="sr-only">Emails sent to this team, newest first</caption>
+        <thead className="bg-surface text-sm text-muted"><tr><th scope="col" className="p-3 font-medium">When</th><th scope="col" className="p-3 font-medium">To</th><th scope="col" className="p-3 font-medium">Email</th><th scope="col" className="p-3 font-medium">Status</th></tr></thead>
+        <tbody>
+          {log.map((l) => (
+            <tr key={l.id} className="border-t border-line align-top">
+              <td className="p-3 whitespace-nowrap text-sm">{when(l.at)}</td>
+              <td className="p-3"><span className="block">{l.name ?? "Removed member"}</span><span className="block text-sm break-all text-muted">{l.recipient}</span></td>
+              <td className="p-3"><span className="block">{KIND[l.kind]}</span>{l.task && <span className="block text-sm text-muted">{l.task}</span>}</td>
+              <td className="p-3">
+                {l.status === "sent" ? <span className="text-success">✓ Sent</span> : l.status === "failed" ? <span className="text-danger" title={l.error ?? undefined}>! Failed, will retry</span> : <span className="text-muted">Sending…</span>}
+                {l.status === "failed" && l.error && <span className="block max-w-xs text-sm text-muted">{l.error}</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

@@ -7,14 +7,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { HexCheck } from "@/components/app/HexCheck";
 import { deleteTask, saveTask, type TaskDoc } from "../../cell/actions";
-import { saveAsTemplate } from "../../hive/actions";
+import { saveAsTemplate, sendAssignmentEmails } from "../../hive/actions";
 
 type Save = "saved" | "saving" | "unsaved" | "error";
 const STATUS: { id: TaskDoc["status"]; label: string }[] = [
   { id: "todo", label: "To do" }, { id: "doing", label: "In progress" }, { id: "done", label: "Done" },
 ];
 
-type TeamCtx = { id: string; name: string; color: string; members: { id: string; name: string }[]; done: string[] };
+type TeamCtx = { id: string; name: string; color: string; members: { id: string; name: string }[]; done: string[]; notified: string[] };
 
 export function TaskEditor({ id, initial, goals, team }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null }) {
   const router = useRouter();
@@ -44,6 +44,38 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
     onUpdate: ({ editor }) => update({ howTo: editor.getJSON() }),
   });
   const [templated, setTemplated] = useState(false);
+  // Buzz: assignees are emailed a minute after the last edit (so a half-typed task isn't sent), or straight away with "Send now"
+  const [notified, setNotified] = useState<string[]>(team?.notified ?? []);
+  const [mailState, setMailState] = useState<string | null>(null);
+  const mailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unsent = team ? (doc.assignees ?? []).filter((m) => !notified.includes(m)) : [];
+  async function sendNow() {
+    if (mailTimer.current) clearTimeout(mailTimer.current);
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; await flush(); }
+    setMailState("Sending…");
+    try {
+      const n = await sendAssignmentEmails(id);
+      setNotified((x) => [...new Set([...x, ...(latest.current.assignees ?? [])])]);
+      setMailState(n ? `Emailed ${n} ${n === 1 ? "person" : "people"}.` : "Everyone assigned has already been emailed.");
+      router.refresh();
+    } catch (err) {
+      setMailState(err instanceof Error ? err.message : "Couldn't send the emails.");
+    }
+  }
+  useEffect(() => {
+    if (!team || unsent.length === 0 || !doc.title.trim()) return;
+    if (mailTimer.current) clearTimeout(mailTimer.current);
+    mailTimer.current = setTimeout(sendNow, 60000);
+    return () => { if (mailTimer.current) clearTimeout(mailTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restart the countdown whenever the task changes
+  }, [doc]);
+  // leaving the page early still sends: the save finishes first, then the email goes out
+  const pendingMail = useRef(false);
+  useEffect(() => { pendingMail.current = Boolean(team && unsent.length && doc.title.trim()); });
+  useEffect(() => () => {
+    if (!pendingMail.current) return;
+    (timer.current ? saveTask(id, latest.current) : Promise.resolve()).then(() => sendAssignmentEmails(id)).catch(() => {}); // hourly sweep is the backstop
+  }, [id]);
 
   // autosave: wait for a pause in typing, then send the whole document
   function update(patch: Partial<TaskDoc>) {
@@ -133,9 +165,17 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
                       <input type="checkbox" className="size-5 accent-[var(--accent)]" checked={doc.assignees?.includes(m.id) ?? false}
                         onChange={(e) => update({ assignees: e.target.checked ? [...(doc.assignees ?? []), m.id] : (doc.assignees ?? []).filter((x) => x !== m.id) })} />
                       <span className="flex-1">{m.name}</span>
-                      {team.done.includes(m.id) && <span className="text-sm text-success">✓ Done</span>}
+                      {team.done.includes(m.id) ? <span className="text-sm text-success">✓ Done</span>
+                        : doc.assignees?.includes(m.id) && (notified.includes(m.id) ? <span className="text-sm text-muted">Emailed</span> : <span className="text-sm text-accent-text">Not emailed yet</span>)}
                     </label>
                   ))}
+                  {unsent.length > 0 && (
+                    <div className="mt-2 grid gap-2 rounded-[var(--radius)] bg-raised p-3 text-sm">
+                      <p>{doc.title.trim() ? `Hexley emails ${unsent.length === 1 ? "this person" : `these ${unsent.length} people`} a minute after your last change.` : "Add a title, then Hexley can email them."}</p>
+                      <button type="button" disabled={!doc.title.trim()} onClick={sendNow} className="min-h-11 justify-self-start rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-50">Send now</button>
+                    </div>
+                  )}
+                  {mailState && <p role="status" className="text-sm text-muted">{mailState}</p>}
                 </fieldset>
               )}
             </dd>

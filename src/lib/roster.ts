@@ -6,7 +6,7 @@ const EMAIL = /^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]{2,}$/;
 
 /** "ana.cruz@school.edu" → "Ana Cruz" when no name is given. */
 export function nameFromEmail(email: string): string {
-  return email.split("@")[0].split(/[._-]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || email;
+  return email.split("@")[0].split("+")[0].split(/[._-]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || email;
 }
 
 export function parseRoster(input: string, existing: string[] = []): Parsed {

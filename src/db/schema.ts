@@ -138,6 +138,7 @@ export const assignment = pgTable("assignment", {
   memberId: text("member_id").notNull().references(() => teamMember.id, { onDelete: "cascade" }),
   doneTokenHash: text("done_token_hash").notNull().unique(),
   doneAt: timestamp("done_at", { withTimezone: true }),
+  notifiedAt: timestamp("notified_at", { withTimezone: true }), // when the assignment email went out
   createdAt: created(),
 }, (t) => [uniqueIndex("assignment_task_member_uq").on(t.taskId, t.memberId)]);
 

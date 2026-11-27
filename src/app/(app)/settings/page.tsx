@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { requireUser } from "@/lib/session";
 import { signOut } from "../actions";
+import { NameField } from "./NameField";
 import { Appearance } from "./Appearance";
 import { CalendarFeed } from "./CalendarFeed";
 
@@ -25,6 +26,7 @@ async function Body() {
     <div className="mt-8 grid gap-10">
       <section aria-labelledby="account">
         <h2 id="account" className="font-display text-xl font-semibold">Account</h2>
+        <NameField initial={me.name} />
         <dl className="mt-4 grid gap-1 text-muted">
           <div><dt className="inline">Signed in as </dt><dd className="inline break-all text-ink">{me.email}</dd></div>
           <div><dt className="inline">Time zone: </dt><dd className="inline text-ink">{me.timezone}</dd></div>
