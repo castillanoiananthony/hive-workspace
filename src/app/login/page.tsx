@@ -21,6 +21,10 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-muted">
           Your teammates never need an account. <a className="text-accent-text underline underline-offset-4" href="/developer">Who made this?</a>
         </p>
+        <p className="mt-3 text-center text-sm text-muted">
+          <a className="underline underline-offset-4" href="/privacy">Privacy</a>
+          <a className="ml-4 underline underline-offset-4" href="/terms">Terms</a>
+        </p>
       </div>
     </main>
   );
