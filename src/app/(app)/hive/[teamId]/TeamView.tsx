@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
@@ -22,8 +23,8 @@ type Member = MemberT;
 type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
-type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[] };
+type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite" | "announce"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
@@ -55,6 +56,13 @@ export function TeamView(props: Props) {
         {has(me, "tasks") && <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button>}
       </div>
 
+      {props.colonyInfo && (
+        <div className="mt-6 flex flex-wrap items-center gap-2 rounded-[calc(var(--radius)*2)] border border-line bg-surface px-4 py-3 text-sm">
+          <span className="text-muted">Swarm in <Link href={`/colony/${props.colonyInfo.id}`} className="font-medium text-ink underline underline-offset-4">{props.colonyInfo.name}</Link>.</span>
+          {props.colonyInfo.milestones.length > 0 && <span className="text-muted">Milestones:</span>}
+          {props.colonyInfo.milestones.map((m) => <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full border border-[#8B5CF6]/70 px-2.5 py-0.5"><span aria-hidden className="size-2 rotate-45 rounded-[1px] bg-[#8B5CF6]" />{m.title}, {m.label}</span>)}
+        </div>
+      )}
       <div role="tablist" aria-label="Team sections" className="relative mt-8 -mx-1 flex gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 [scrollbar-width:none]">
         {tabs.map((t) => (
           <button key={t.id} type="button" role="tab" id={`tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`panel-${t.id}`} onClick={() => setTab(t.id)}
@@ -151,7 +159,7 @@ function Recurrence({ template: t, members }: { template: Template; members: Mem
 
 // ---------- email log ----------
 
-const KIND = { assign: "New task", remind3: "Reminder", remind1: "Last reminder", digest: "Weekly digest", invite: "Invite" } as const;
+const KIND = { assign: "New task", remind3: "Reminder", remind1: "Last reminder", digest: "Weekly digest", invite: "Invite", announce: "Class announcement" } as const;
 
 function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
   if (log.length === 0) return <EmptyState pose="fly" title="No emails yet" body="Every Buzz email this team sends shows up here: who got it, what it was, when, and whether it went through." />;

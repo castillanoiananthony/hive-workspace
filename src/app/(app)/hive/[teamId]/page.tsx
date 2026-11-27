@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { BackButton } from "@/components/app/BackButton";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { db } from "@/db";
-import { assignment, combPost, contribution, progressLog, subtask, taskLink, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
+import { assignment, colony, combPost, contribution, milestone, progressLog, subtask, taskLink, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
 import { ALL_PERMS, can } from "@/lib/hive-perms";
 import { requireUser } from "@/lib/session";
 import { lastDays } from "@/lib/activity";
@@ -64,6 +64,11 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
   const logs = await db.select({ id: progressLog.id, taskId: assignment.taskId, memberId: assignment.memberId, progress: progressLog.progress, done: progressLog.done, note: progressLog.note, at: progressLog.createdAt })
     .from(progressLog).innerJoin(assignment, eq(progressLog.assignmentId, assignment.id))
     .where(eq(progressLog.teamId, teamId)).orderBy(desc(progressLog.createdAt)).limit(300);
+  const classInfo = t.colonyId ? await Promise.all([
+    db.select({ id: colony.id, name: colony.name }).from(colony).where(eq(colony.id, t.colonyId)),
+    db.select().from(milestone).where(eq(milestone.colonyId, t.colonyId)).orderBy(asc(milestone.dueAt)),
+  ]) : null;
+  const milestones = classInfo ? classInfo[1].map((m) => { const z = utcToZoned(m.dueAt, me.timezone); return { id: m.id, title: m.title, date: z.date, label: new Intl.DateTimeFormat("en", { timeZone: me.timezone, month: "short", day: "numeric" }).format(m.dueAt) }; }) : [];
   const days = lastDays(me.timezone, { done: assigned.map((a) => a.doneAt), created: tasks.map((x) => x.createdAt), posts: posts.map((p) => p.createdAt), logs: logs.map((l) => l.at) });
 
   return (
@@ -71,7 +76,8 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
       days={days}
       contributions={contributions.map((c) => ({ id: c.id, memberId: c.memberId, kind: c.kind, what: c.what, at: c.createdAt.toISOString() }))}
       logs={logs.map((l) => ({ ...l, at: l.at.toISOString() }))}
-      calendar={tasks.filter((x) => x.dueAt).map((x) => { const z = utcToZoned(x.dueAt!, me.timezone); return { id: x.id, title: x.title || "Untitled task", done: x.status === "done", date: z.date, time: x.hasTime ? z.time : null, space: t.id, spaceName: t.name, color: t.color, tint: importanceOf(x.importance, t.importanceColors)?.color ?? null }; })}
+      colonyInfo={classInfo?.[0][0] ? { id: classInfo[0][0].id, name: classInfo[0][0].name, milestones } : null}
+      calendar={[...milestones.map((m) => ({ id: `ms-${m.id}`, title: `Milestone: ${m.title}`, done: false, date: m.date, time: null, space: t.id, spaceName: t.name, color: "#8B5CF6", tint: "#8B5CF6" })), ...tasks.filter((x) => x.dueAt).map((x) => { const z = utcToZoned(x.dueAt!, me.timezone); return { id: x.id, title: x.title || "Untitled task", done: x.status === "done", date: z.date, time: x.hasTime ? z.time : null, space: t.id, spaceName: t.name, color: t.color, tint: importanceOf(x.importance, t.importanceColors)?.color ?? null }; })]}
       tz={me.timezone}
       me={{ memberId: mine.id, isAdmin: mine.isAdmin, perms: mine.isAdmin ? ALL_PERMS : mine.perms, access: mine.access, subtasks: Number(mySubs?.n ?? 0) }}
       team={{ id: t.id, name: t.name, color: t.color, digestEnabled: t.digestEnabled, digestDay: t.digestDay, joinCode: can(mine, "members") ? t.joinCode : null, importanceColors: t.importanceColors ?? null, app: process.env.APP_URL ?? "http://localhost:3000" }}

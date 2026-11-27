@@ -47,7 +47,7 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
   const events = tasks
     .filter((t) => !hidden.has(t.space))
     .map((t) => ({
-      id: t.id, title: t.title, allDay: !t.time, start: t.time ? `${t.date}T${t.time}:00` : t.date,
+      id: t.id, title: t.title, allDay: !t.time, start: t.time ? `${t.date}T${t.time}:00` : t.date, editable: !t.id.startsWith("ms-"),
       color: t.tint ?? t.color ?? "var(--accent)", contrastColor: readableOn(t.tint ?? t.color),
       backgroundColor: t.tint ?? t.color ?? "var(--accent)", borderColor: t.tint ?? t.color ?? "var(--accent-edge)",
       textColor: readableOn(t.tint ?? t.color), classNames: t.done ? ["is-done"] : [],
@@ -136,7 +136,7 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
               eventLongPressDelay={350}
               events={events}
               eventDrop={onDrop}
-              eventClick={(info) => { info.jsEvent.preventDefault(); router.push(`/tasks/${info.event.id}`); }}
+              eventClick={(info) => { info.jsEvent.preventDefault(); if (!info.event.id.startsWith("ms-")) router.push(`/tasks/${info.event.id}`); }} // ms-: class milestones, not tasks
               datesSet={(info) => { setTitle(info.view.title); setView(info.view.type); }}
               noEventsContent="No tasks due in this period."
               eventContent={(arg) => arg.view.type === "dayGridMonth"

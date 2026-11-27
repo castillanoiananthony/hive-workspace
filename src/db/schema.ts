@@ -100,6 +100,7 @@ export const team = pgTable("team", {
   digestDay: smallint("digest_day").notNull().default(1), // 0 = Sunday
   joinCode: text("join_code").unique(), // shareable join link; null = switched off
   importanceColors: jsonb("importance_colors").$type<Record<string, string>>(), // overrides for Low/Medium/High
+  colonyId: text("colony_id").references((): AnyPgColumn => colony.id, { onDelete: "set null" }), // a Swarm inside a class
   createdAt: created(),
   updatedAt: updated(),
 });
@@ -201,7 +202,7 @@ export const template = pgTable("template", {
   updatedAt: updated(),
 });
 
-export const emailKind = pgEnum("email_kind", ["assign", "remind3", "remind1", "digest", "invite"]);
+export const emailKind = pgEnum("email_kind", ["assign", "remind3", "remind1", "digest", "invite", "announce"]);
 export const emailStatus = pgEnum("email_status", ["queued", "sent", "failed"]);
 
 export const emailLog = pgTable("email_log", {
@@ -296,3 +297,58 @@ export const taskComment = pgTable("task_comment", {
   body: text("body").notNull(),
   createdAt: created(),
 }, (t) => [index("task_comment_task_idx").on(t.taskId, t.createdAt)]);
+
+// ---------- class mode: a Colony (class) run by a Queen Bee (teacher), with Swarms (groups = teams) inside ----------
+
+export const colony = pgTable("colony", {
+  id: id(),
+  name: text("name").notNull(),
+  queenId: text("queen_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  joinCode: text("join_code").notNull().unique(), // 6 characters, no look-alikes
+  selfSwarm: boolean("self_swarm").notNull().default(false), // students may form their own swarms
+  createdAt: created(),
+});
+
+export const colonyMember = pgTable("colony_member", {
+  colonyId: text("colony_id").notNull().references(() => colony.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  joinedAt: created(),
+}, (t) => [primaryKey({ columns: [t.colonyId, t.userId] }), index("colony_member_user_idx").on(t.userId)]);
+
+// Checkpoints the Queen Bee sets; every swarm in the class sees them.
+export const milestone = pgTable("milestone", {
+  id: id(),
+  colonyId: text("colony_id").notNull().references(() => colony.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  dueAt: timestamp("due_at", { withTimezone: true }).notNull(),
+  createdAt: created(),
+}, (t) => [index("milestone_colony_idx").on(t.colonyId, t.dueAt)]);
+
+export const colonyPost = pgTable("colony_post", {
+  id: id(),
+  colonyId: text("colony_id").notNull().references(() => colony.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: created(),
+}, (t) => [index("colony_post_idx").on(t.colonyId, t.createdAt)]);
+
+// Peer evaluation at the end of a project: each student rates their swarm-mates 1–5 on a few criteria.
+export const peerEval = pgTable("peer_eval", {
+  id: id(),
+  colonyId: text("colony_id").notNull().references(() => colony.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  criteria: jsonb("criteria").$type<string[]>().notNull(),
+  open: boolean("open").notNull().default(true),
+  showToStudents: boolean("show_to_students").notNull().default(false), // students see their own averages
+  createdAt: created(),
+});
+
+export const peerResponse = pgTable("peer_response", {
+  id: id(),
+  evalId: text("eval_id").notNull().references(() => peerEval.id, { onDelete: "cascade" }),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  raterId: text("rater_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  rateeId: text("ratee_id").notNull().references(() => teamMember.id, { onDelete: "cascade" }),
+  scores: jsonb("scores").$type<number[]>().notNull(),
+  comment: text("comment"),
+  createdAt: created(),
+}, (t) => [uniqueIndex("peer_response_uq").on(t.evalId, t.raterId, t.rateeId), index("peer_response_eval_idx").on(t.evalId)]);

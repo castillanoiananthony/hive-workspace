@@ -30,7 +30,7 @@ async function doneLink(assignmentId: string) {
   await db.update(assignment).set({ doneTokenHash: hashToken(token) }).where(eq(assignment.id, assignmentId));
   return `${app()}/done/${token}`;
 }
-async function unsubscribeLinks(memberId: string) {
+export async function unsubscribeLinks(memberId: string) {
   const token = mac("unsub", memberId);
   await db.update(teamMember).set({ unsubscribeTokenHash: hashToken(token) }).where(eq(teamMember.id, memberId));
   return { page: `${app()}/unsubscribe/${token}`, oneClick: `${app()}/api/unsubscribe/${token}` };
