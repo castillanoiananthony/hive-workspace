@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BackButton } from "@/components/app/BackButton";
@@ -34,14 +34,14 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
   const [members, roles, tasks, templates, log, posts, links] = await Promise.all([
     db.select().from(teamMember).where(eq(teamMember.teamId, teamId)).orderBy(asc(teamMember.position), asc(teamMember.createdAt)),
     db.select().from(teamRole).where(eq(teamRole.teamId, teamId)).orderBy(asc(teamRole.position), asc(teamRole.createdAt)),
-    db.select({ id: task.id, title: task.title, status: task.status, dueAt: task.dueAt, hasTime: task.hasTime, createdAt: task.createdAt }).from(task).where(eq(task.teamId, teamId)).orderBy(asc(task.dueAt), asc(task.createdAt)),
+    db.select({ id: task.id, title: task.title, status: task.status, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance, createdAt: task.createdAt }).from(task).where(eq(task.teamId, teamId)).orderBy(asc(task.dueAt), asc(task.createdAt)),
     can(mine, "templates") ? db.select().from(template).where(eq(template.teamId, teamId)).orderBy(asc(template.createdAt)) : Promise.resolve([]),
     can(mine, "log")
       ? db.select({ id: emailLog.id, kind: emailLog.kind, recipient: emailLog.recipient, status: emailLog.status, error: emailLog.error, at: emailLog.createdAt, sentAt: emailLog.sentAt, name: teamMember.name, task: task.title })
           .from(emailLog).leftJoin(teamMember, eq(emailLog.memberId, teamMember.id)).leftJoin(task, eq(emailLog.taskId, task.id))
           .where(eq(emailLog.teamId, teamId)).orderBy(desc(emailLog.createdAt)).limit(100)
       : Promise.resolve([]),
-    db.select().from(combPost).where(eq(combPost.teamId, teamId)).orderBy(desc(combPost.createdAt)).limit(50),
+    db.select().from(combPost).where(and(eq(combPost.teamId, teamId), can(mine, "hide") ? undefined : isNull(combPost.hiddenAt))).orderBy(desc(combPost.createdAt)).limit(50),
     db.select().from(teamLink).where(eq(teamLink.teamId, teamId)).orderBy(desc(teamLink.createdAt)),
   ]);
   const taskIds = tasks.map((x) => x.id);
@@ -57,7 +57,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
     <TeamView
       tz={me.timezone}
       me={{ memberId: mine.id, isAdmin: mine.isAdmin, perms: mine.isAdmin ? ALL_PERMS : mine.perms }}
-      team={{ id: t.id, name: t.name, color: t.color, digestEnabled: t.digestEnabled, digestDay: t.digestDay, joinCode: can(mine, "members") ? t.joinCode : null, app: process.env.APP_URL ?? "http://localhost:3000" }}
+      team={{ id: t.id, name: t.name, color: t.color, digestEnabled: t.digestEnabled, digestDay: t.digestDay, joinCode: can(mine, "members") ? t.joinCode : null, importanceColors: t.importanceColors ?? null, app: process.env.APP_URL ?? "http://localhost:3000" }}
       members={members.map((m) => ({
         id: m.id, name: m.name, nickname: m.nickname, email: can(mine, "members") || m.id === mine.id ? m.email : null,
         joined: Boolean(m.userId), isAdmin: m.isAdmin, roleId: m.roleId, perms: m.isAdmin ? ALL_PERMS : m.perms, parentId: m.parentId, position: m.position,
@@ -65,10 +65,10 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
       }))}
       links={links.map((l) => ({ id: l.id, title: l.title, url: l.url, note: l.note, memberId: l.memberId, at: l.createdAt.toISOString() }))}
       roles={roles.map((r) => ({ id: r.id, name: r.name, perms: r.perms, isLeader: r.isLeader }))}
-      tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime }))}
+      tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime, importance: x.importance }))}
       assigned={assigned.map((a) => ({ ...a, doneAt: a.doneAt?.toISOString() ?? null }))}
       stream={[
-        ...posts.map((p) => ({ kind: "post" as const, id: p.id, at: p.createdAt.toISOString(), memberId: p.memberId, body: p.body })),
+        ...posts.map((p) => ({ kind: "post" as const, id: p.id, at: p.createdAt.toISOString(), memberId: p.memberId, body: p.body, hidden: Boolean(p.hiddenAt) })),
         ...doneMarks.map((d) => ({ kind: "done" as const, id: `d-${d.taskId}-${d.memberId}`, at: d.at!.toISOString(), memberId: d.memberId, taskId: d.taskId })),
         ...tasks.filter((x) => x.title).map((x) => ({ kind: "task" as const, id: `t-${x.id}`, at: x.createdAt.toISOString(), memberId: null, taskId: x.id })),
       ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60)}

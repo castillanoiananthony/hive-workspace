@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { assignment, checklistItem, combPost, task, taskLink, team, teamLink, teamMember, teamRole, template } from "@/db/schema";
 import { sendInvites, sendPendingAssignments } from "@/lib/buzz";
 import { ALL_PERMS, DEFAULT_PERMS, type Perm } from "@/lib/hive-perms";
+import { cleanImportanceColors } from "@/lib/importance";
 import { parseRoster } from "@/lib/roster";
 import { requireUser } from "@/lib/session";
 import { createTeamTask } from "@/lib/team-tasks";
@@ -41,13 +42,14 @@ export async function createTeam(input: { name: string; color: string; roles?: s
   redirect(`/hive/${id}`);
 }
 
-export async function updateTeam(teamId: string, patch: { name?: string; color?: string; digestEnabled?: boolean; digestDay?: number }) {
+export async function updateTeam(teamId: string, patch: { name?: string; color?: string; digestEnabled?: boolean; digestDay?: number; importanceColors?: Record<string, string> }) {
   const me = await requireUser();
   await requirePerm(me.id, teamId, "settings");
   const set: Partial<typeof team.$inferInsert> = {};
   if (patch.name !== undefined) { set.name = text(patch.name, 80); if (!set.name) throw new Error("A team needs a name."); }
   if (patch.color !== undefined) set.color = color(patch.color);
   if (patch.digestEnabled !== undefined) set.digestEnabled = Boolean(patch.digestEnabled);
+  if (patch.importanceColors !== undefined) set.importanceColors = cleanImportanceColors(patch.importanceColors);
   if (patch.digestDay !== undefined) set.digestDay = Math.max(0, Math.min(6, Math.round(patch.digestDay)));
   await db.update(team).set(set).where(eq(team.id, teamId));
   refresh(teamId);
@@ -239,6 +241,16 @@ export async function deleteCombPost(postId: string) {
   const { me: member } = await teamAccess(me.id, p.teamId);
   if (p.memberId !== member.id && !member.isAdmin) throw new Error("You can only delete your own posts.");
   await db.delete(combPost).where(eq(combPost.id, postId));
+  refresh(p.teamId);
+}
+
+/** Hide a post from the team (or bring it back). Needs the "hide" power; the Leader always has it. */
+export async function hideCombPost(postId: string, hidden: boolean) {
+  const me = await requireUser();
+  const [p] = await db.select().from(combPost).where(eq(combPost.id, postId));
+  if (!p) return;
+  await requirePerm(me.id, p.teamId, "hide");
+  await db.update(combPost).set({ hiddenAt: hidden ? new Date() : null }).where(eq(combPost.id, postId));
   refresh(p.teamId);
 }
 

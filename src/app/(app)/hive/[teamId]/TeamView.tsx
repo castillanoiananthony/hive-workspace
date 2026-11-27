@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
 import { HexBadge } from "@/components/app/HexBadge";
 import { HexCheck } from "@/components/app/HexCheck";
+import { ImportanceTag } from "@/components/app/ImportanceTag";
+import { IMPORTANCE } from "@/lib/importance";
 import { formatDue } from "@/lib/dates";
 import { deleteTeam, deleteTemplate, markMyPart, newTeamTask, updateTeam, updateTemplate } from "../actions";
 import { ColorPicker } from "../NewTeam";
@@ -103,7 +105,7 @@ function Board({ team, members, tasks, assigned, tz, me, onRoster }: Props & { o
 
   return (
     <>
-      {mine.length > 0 && <MyTasks tasks={mine} assigned={assigned} me={me} tz={tz} />}
+      {mine.length > 0 && <MyTasks tasks={mine} assigned={assigned} me={me} tz={tz} importanceColors={team.importanceColors} />}
       {/* wide screens: grid of tasks × members */}
       <div className="hidden overflow-x-auto rounded-[var(--radius)] border border-line md:block">
         <table className="w-full border-collapse text-left">
@@ -124,6 +126,7 @@ function Board({ team, members, tasks, assigned, tz, me, onRoster }: Props & { o
               <tr key={t.id} className="border-t border-line">
                 <th scope="row" className="p-3 font-medium">
                   <Link href={`/tasks/${t.id}`} className="hover:underline">{t.title || "Untitled task"}</Link>
+                  {t.importance > 0 && <ImportanceTag level={t.importance} colors={team.importanceColors} className="ml-2 align-middle" />}
                   {t.dueAt && <span className="block text-sm font-normal text-muted">Due {formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}
                 </th>
                 {members.map((m) => {
@@ -140,7 +143,7 @@ function Board({ team, members, tasks, assigned, tz, me, onRoster }: Props & { o
       <ul className="grid gap-3 md:hidden">
         {tasks.map((t) => (
           <li key={t.id} className="rounded-[var(--radius)] border border-line bg-surface p-4">
-            <Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title || "Untitled task"}</Link>
+            <div className="flex flex-wrap items-center gap-2"><Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title || "Untitled task"}</Link><ImportanceTag level={t.importance} colors={team.importanceColors} /></div>
             {t.dueAt && <p className="text-sm text-muted">Due {formatDue(new Date(t.dueAt), t.hasTime, tz)}</p>}
             <ul className="mt-3 grid gap-2">
               {members.filter((m) => state(t, m)).map((m) => (
@@ -159,7 +162,7 @@ function Board({ team, members, tasks, assigned, tz, me, onRoster }: Props & { o
 }
 
 /** Your own part of team tasks: tick it here or with the email's Mark done link. */
-function MyTasks({ tasks, assigned, me, tz }: { tasks: Task[]; assigned: Assigned[]; me: MeT; tz: string }) {
+function MyTasks({ tasks, assigned, me, tz, importanceColors }: { tasks: Task[]; assigned: Assigned[]; me: MeT; tz: string; importanceColors: Record<string, string> | null }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   return (
@@ -172,6 +175,7 @@ function MyTasks({ tasks, assigned, me, tz }: { tasks: Task[]; assigned: Assigne
             <li key={t.id} className="flex items-center gap-1">
               <HexCheck checked={done} label={`Mark my part of “${t.title}” done`} onChange={(v) => start(async () => { await markMyPart(t.id, v); router.refresh(); })} />
               <Link href={`/tasks/${t.id}`} className={`min-h-11 flex-1 py-2 hover:underline ${done ? "text-muted line-through" : ""}`}>{t.title || "Untitled task"}</Link>
+              <ImportanceTag level={t.importance} colors={importanceColors} />
               {t.dueAt && <span className="text-sm whitespace-nowrap text-muted">{formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}
               {pending && <span className="sr-only">Saving…</span>}
             </li>
@@ -289,6 +293,7 @@ function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
 function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: RoleT[]; members: Member[] }) {
   const router = useRouter();
   const [color, setColor] = useState(team.color);
+  const [imp, setImp] = useState<Record<string, string>>(team.importanceColors ?? {});
   const [msg, setMsg] = useState<string | null>(null);
   const [confirmName, setConfirmName] = useState("");
   const [pending, start] = useTransition();
@@ -299,13 +304,26 @@ function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: Ro
         const f = new FormData(e.currentTarget);
         start(async () => {
           try {
-            await updateTeam(team.id, { name: String(f.get("name")), color, digestEnabled: f.get("digest") === "on", digestDay: Number(f.get("digestDay")) });
+            await updateTeam(team.id, { name: String(f.get("name")), color, digestEnabled: f.get("digest") === "on", digestDay: Number(f.get("digestDay")), importanceColors: imp });
             setMsg("Saved."); router.refresh();
           } catch (err) { setMsg(err instanceof Error ? err.message : "Couldn't save."); }
         });
       }}>
         <label className="grid gap-2"><span className="font-medium">Team name</span><input name="name" defaultValue={team.name} maxLength={80} required className={field} /></label>
         <ColorPicker value={color} onChange={setColor} />
+        <fieldset className="grid gap-2 rounded-[var(--radius)] border border-line p-4">
+          <legend className="px-1 font-medium">Importance colours</legend>
+          <p className="text-sm text-muted">Every task can be marked Low, Medium or High. Pick the colour each one shows in this team.</p>
+          <div className="flex flex-wrap gap-4">
+            {IMPORTANCE.map((l) => (
+              <label key={l.v} className="flex min-h-11 items-center gap-2">
+                <input type="color" value={imp[l.v] ?? l.color} onChange={(e) => setImp((x) => ({ ...x, [l.v]: e.target.value }))} className="size-11 cursor-pointer rounded-[var(--radius)] border border-line bg-bg p-1" />
+                {l.label}
+              </label>
+            ))}
+            <button type="button" onClick={() => setImp({})} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Reset to default</button>
+          </div>
+        </fieldset>
         <fieldset className="grid gap-2 rounded-[var(--radius)] border border-line p-4">
           <legend className="px-1 font-medium">Weekly digest</legend>
           <label className="flex min-h-11 items-center gap-2"><input type="checkbox" name="digest" defaultChecked={team.digestEnabled} className="size-5 accent-[var(--accent)]" /> Email everyone a summary each week</label>

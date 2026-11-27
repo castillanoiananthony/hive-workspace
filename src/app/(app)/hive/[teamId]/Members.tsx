@@ -60,7 +60,7 @@ function MemberRow({ m, team, role, canManage, me }: { m: MemberT; team: TeamT; 
           </form>
         ) : (
           <>
-            <p className="font-medium">{nameOf(m)}{m.nickname && <span className="font-normal text-muted"> ({m.name})</span>}{m.id === me.memberId && <span className="font-normal text-muted"> (you)</span>}</p>
+            <p className="font-medium [overflow-wrap:anywhere]">{nameOf(m)}{m.nickname && <span className="font-normal text-muted"> ({m.name})</span>}{m.id === me.memberId && <span className="font-normal text-muted"> (you)</span>}</p>
             <p className="truncate text-sm text-muted">{role}{m.email ? `, ${m.email}` : ""}{m.unsubscribed ? ". Turned off Buzz emails" : ""}</p>
           </>
         )}

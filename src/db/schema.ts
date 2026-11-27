@@ -99,6 +99,7 @@ export const team = pgTable("team", {
   digestEnabled: boolean("digest_enabled").notNull().default(false),
   digestDay: smallint("digest_day").notNull().default(1), // 0 = Sunday
   joinCode: text("join_code").unique(), // shareable join link; null = switched off
+  importanceColors: jsonb("importance_colors").$type<Record<string, string>>(), // overrides for Low/Medium/High
   createdAt: created(),
   updatedAt: updated(),
 });
@@ -115,6 +116,7 @@ export const task = pgTable("task", {
   status: taskStatus("status").notNull().default("todo"),
   dueAt: timestamp("due_at", { withTimezone: true }),
   hasTime: boolean("has_time").notNull().default(false),
+  importance: smallint("importance").notNull().default(0), // 0 none, 1 low, 2 medium, 3 high
   createdAt: created(),
   updatedAt: updated(),
 }, (t) => [index("task_owner_idx").on(t.ownerId), index("task_team_idx").on(t.teamId), index("task_goal_idx").on(t.goalId), index("task_due_idx").on(t.dueAt)]);
@@ -225,6 +227,7 @@ export const combPost = pgTable("comb_post", {
   teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
   memberId: text("member_id").references(() => teamMember.id, { onDelete: "set null" }),
   body: text("body").notNull(),
+  hiddenAt: timestamp("hidden_at", { withTimezone: true }), // hidden by someone with the "hide" power
   createdAt: created(),
 }, (t) => [index("comb_team_idx").on(t.teamId, t.createdAt)]);
 

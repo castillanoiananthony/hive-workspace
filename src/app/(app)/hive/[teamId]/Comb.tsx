@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Bee } from "@/components/brand/Bee";
 import { HexBadge } from "@/components/app/HexBadge";
-import { deleteCombPost, postToComb } from "../actions";
+import { deleteCombPost, hideCombPost, postToComb } from "../actions";
 import { MemberAvatar } from "./MemberAvatar";
 import { has, nameOf, type MeT, type MemberT, type StreamT, type TaskT, type TeamT } from "./types";
 
@@ -27,6 +27,9 @@ export function Comb({ team, members, tasks, stream, me }: { team: TeamT; member
   const member = (id: string | null) => members.find((m) => m.id === id);
   const taskTitle = (id: string) => tasks.find((t) => t.id === id)?.title || "a task";
   const mine = member(me.memberId);
+  const [showHidden, setShowHidden] = useState(false);
+  const hiddenCount = stream.filter((s) => s.kind === "post" && s.hidden).length;
+  const shown = stream.filter((s) => s.kind !== "post" || !s.hidden || showHidden);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -56,25 +59,38 @@ export function Comb({ team, members, tasks, stream, me }: { team: TeamT; member
         </div>
       ) : (
         <ol className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3">
-          {stream.map((s) => {
+          {has(me, "hide") && hiddenCount > 0 && (
+            <li className="flex justify-end">
+              <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium hover:border-accent-edge aria-pressed:border-accent-edge aria-pressed:bg-raised">
+                {showHidden ? "Hide the hidden posts" : `View hidden posts (${hiddenCount})`}
+              </button>
+            </li>
+          )}
+          {shown.map((s) => {
             const who = member(s.memberId);
             return (
               <li key={s.id}>
-                <article className="rounded-[var(--radius)] border border-line bg-surface p-4">
+                <article className={`rounded-[var(--radius)] border bg-surface p-4 ${s.kind === "post" && s.hidden ? "border-dashed border-line opacity-80" : "border-line"}`}>
                   <div className="flex items-center gap-3">
                     {s.kind === "task" ? <HexBadge label={team.name} color={team.color} size={40} /> : who ? <MemberAvatar m={who} color={team.color} size={40} /> : <HexBadge label="?" color={team.color} size={40} />}
                     <div className="min-w-0 flex-1">
                       {s.kind === "post" && <p className="truncate font-semibold">{who ? nameOf(who) : "Former member"}</p>}
                       {s.kind === "done" && <p><span className="font-semibold">{who ? nameOf(who) : "Someone"}</span> marked <Link href={`/tasks/${s.taskId}`} className="font-semibold hover:underline">“{taskTitle(s.taskId)}”</Link> done <span className="text-success">✓</span></p>}
                       {s.kind === "task" && <p>New task: <Link href={`/tasks/${s.taskId}`} className="font-semibold hover:underline">“{taskTitle(s.taskId)}”</Link></p>}
-                      <p className="text-sm text-muted">{ago(s.at, now)}</p>
+                      <p className="text-sm text-muted">{ago(s.at, now)}{s.kind === "post" && s.hidden ? ". Hidden from the team" : ""}</p>
                     </div>
+                  </div>
+                  {/* the post gets the card's full width, not a column squeezed beside the picture */}
+                  {s.kind === "post" && <p className="mt-3 max-w-[70ch] whitespace-pre-line break-words">{s.body}</p>}
+                  {/* actions under the post, so the name and time keep the full width on phones */}
+                  <div className="mt-1 flex justify-end empty:hidden">
+                    {s.kind === "post" && has(me, "hide") && (
+                      <button type="button" disabled={pending} onClick={() => start(async () => { await hideCombPost(s.id, !s.hidden); router.refresh(); })} className="min-h-11 shrink-0 px-2 text-sm text-muted hover:text-ink">{s.hidden ? "Unhide" : "Hide"}</button>
+                    )}
                     {s.kind === "post" && (s.memberId === me.memberId || me.isAdmin) && (
                       <button type="button" disabled={pending} onClick={() => { if (confirm("Delete this post?")) start(async () => { await deleteCombPost(s.id); router.refresh(); }); }} className="min-h-11 shrink-0 px-2 text-sm text-muted hover:text-danger">Delete</button>
                     )}
                   </div>
-                  {/* the post gets the card's full width, not a column squeezed beside the picture */}
-                  {s.kind === "post" && <p className="mt-3 max-w-[70ch] whitespace-pre-line break-words">{s.body}</p>}
                 </article>
               </li>
             );

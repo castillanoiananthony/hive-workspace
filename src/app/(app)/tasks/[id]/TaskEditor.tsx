@@ -1,4 +1,5 @@
 "use client";
+import { IMPORTANCE, importanceOf } from "@/lib/importance";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
@@ -15,7 +16,7 @@ const STATUS: { id: TaskDoc["status"]; label: string }[] = [
   { id: "todo", label: "To do" }, { id: "doing", label: "In progress" }, { id: "done", label: "Done" },
 ];
 
-type TeamCtx = { id: string; name: string; color: string; members: { id: string; name: string }[]; done: string[]; notified: string[] };
+type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; members: { id: string; name: string }[]; done: string[]; notified: string[] };
 
 export function TaskEditor({ id, initial, goals, team }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null }) {
   const router = useRouter();
@@ -155,6 +156,18 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
             {STATUS.map((s) => (
               <button key={s.id} type="button" role="radio" aria-checked={doc.status === s.id} onClick={() => update({ status: s.id })}
                 className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium aria-checked:border-accent-edge aria-checked:bg-raised">{s.label}</button>
+            ))}
+          </div>
+        </dd>
+        <dt className="self-center text-sm text-muted">Importance</dt>
+        <dd>
+          <div role="radiogroup" aria-label="Importance" className="flex flex-wrap gap-2">
+            {[{ v: 0, label: "None", color: null as string | null }, ...IMPORTANCE.map((l) => ({ v: l.v as number, label: l.label, color: importanceOf(l.v, team?.importanceColors)!.color }))].map((l) => (
+              <button key={l.v} type="button" role="radio" aria-checked={(doc.importance ?? 0) === l.v} onClick={() => update({ importance: l.v })}
+                className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius)] border border-line px-3 text-sm font-medium aria-checked:bg-raised"
+                style={(doc.importance ?? 0) === l.v && l.color ? { borderColor: l.color } : undefined}>
+                {l.color && <span aria-hidden className="size-3 rounded-full" style={{ background: l.color }} />}{l.label}
+              </button>
             ))}
           </div>
         </dd>

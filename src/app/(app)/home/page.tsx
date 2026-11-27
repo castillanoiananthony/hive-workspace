@@ -29,7 +29,7 @@ async function Home() {
   const [feed, images, upcoming, teams] = await Promise.all([
     buildFeed(me.id),
     profileImages(me.id),
-    db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime })
+    db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance })
       .from(task).where(and(eq(task.ownerId, me.id), isNull(task.teamId), ne(task.status, "done"))).orderBy(asc(task.dueAt)).limit(50),
     db.select({ id: team.id, name: team.name, color: team.color, open: count(task.id) }).from(team)
       .leftJoin(task, and(eq(task.teamId, team.id), ne(task.status, "done"))).where(inMyTeams(me.id)).groupBy(team.id).orderBy(asc(team.name)),

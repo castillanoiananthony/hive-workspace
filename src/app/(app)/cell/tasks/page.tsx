@@ -24,7 +24,7 @@ export default function TasksPage() {
 async function Tasks() {
   const me = await requireUser();
   const [tasks, goals] = await Promise.all([
-    db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime, updatedAt: task.updatedAt })
+    db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance, updatedAt: task.updatedAt })
       .from(task).where(and(eq(task.ownerId, me.id), isNull(task.teamId))).orderBy(desc(task.updatedAt)),
     db.select({ id: goal.id, title: goal.title }).from(goal).where(and(eq(goal.ownerId, me.id), isNull(goal.archivedAt))).orderBy(asc(goal.createdAt)),
   ]);

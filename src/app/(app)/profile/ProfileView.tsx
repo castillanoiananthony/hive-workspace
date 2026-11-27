@@ -61,12 +61,12 @@ export function ProfileView(p: Props) {
           <div className="relative -mt-14 sm:-mt-16">
             {p.avatar
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={p.avatar} alt="Your profile picture" width={128} height={128} className="size-28 rounded-full border-4 border-surface bg-raised object-cover sm:size-32" />
-              : <span className="grid size-28 place-items-center rounded-full border-4 border-surface bg-raised sm:size-32"><HexBadge label={p.name || p.email} color="#F5B80B" size={72} /></span>}
+              ? <img src={p.avatar} alt="Your profile picture" width={128} height={128} className="size-28 rounded-full border-4 border-accent bg-raised object-cover sm:size-32" />
+              : <span className="grid size-28 place-items-center rounded-full border-4 border-accent bg-raised sm:size-32"><HexBadge label={p.name || p.email} color="#F5B80B" size={72} /></span>}
           </div>
-          <div className="min-w-0 flex-1 pt-3">
-            <p className="font-display text-2xl font-semibold sm:text-3xl">{p.name || "Add your name"}</p>
-            <p className="text-sm text-muted">{p.email}. Member since {p.since}.</p>
+          <div className="min-w-0 basis-full sm:basis-0 sm:flex-1 sm:pt-3">
+            <p className="font-display text-2xl font-semibold [overflow-wrap:anywhere] sm:text-3xl">{p.name || "Add your name"}</p>
+            <p className="text-sm text-muted [overflow-wrap:anywhere]">{p.email}. Member since {p.since}.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={pending} onClick={() => avatarInput.current?.click()} className={btn}>{p.avatar ? "Change picture" : "Add a picture"}</button>

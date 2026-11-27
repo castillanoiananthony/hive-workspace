@@ -57,6 +57,13 @@
       "when": 1795795767999,
       "tag": "0007_role_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795797117306,
+      "tag": "0008_importance_hide",
+      "breakpoints": true
     }
   ]
 }

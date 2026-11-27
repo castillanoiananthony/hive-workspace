@@ -131,6 +131,7 @@ export type TaskDoc = {
   goalId: string | null;
   checklist: { text: string; done: boolean }[];
   links: { title: string; url: string }[];
+  importance?: number; // 0 none, 1 low, 2 medium, 3 high
   howTo?: unknown; // team tasks: "How to do it"
   assignees?: string[]; // team tasks: roster member ids
 };
@@ -157,7 +158,7 @@ export async function saveTask(id: string, doc: TaskDoc) {
   });
   await db.transaction(async (tx) => {
     await tx.update(task).set({
-      title: text(doc.title), notes: doc.notes ?? null, status: ["todo", "doing", "done"].includes(doc.status) ? doc.status : "todo",
+      title: text(doc.title), notes: doc.notes ?? null, status: ["todo", "doing", "done"].includes(doc.status) ? doc.status : "todo", importance: [1, 2, 3].includes(Number(doc.importance)) ? Number(doc.importance) : 0,
       dueAt, hasTime: Boolean(dueAt && doc.dueTime), goalId: parent?.id ?? null,
       ...(before.teamId ? { howTo: doc.howTo ?? null } : {}),
     }).where(eq(task.id, id));

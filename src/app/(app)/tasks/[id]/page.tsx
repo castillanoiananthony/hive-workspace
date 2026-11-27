@@ -28,7 +28,7 @@ export default function TaskPage({ params }: PageProps<"/tasks/[id]">) {
 async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) {
   const { id } = await params;
   const me = await requireUser();
-  const [hit] = await db.select({ t: task, team: { id: team.id, name: team.name, color: team.color } }).from(task).leftJoin(team, eq(task.teamId, team.id)).where(eq(task.id, id));
+  const [hit] = await db.select({ t: task, team: { id: team.id, name: team.name, color: team.color, importanceColors: team.importanceColors } }).from(task).leftJoin(team, eq(task.teamId, team.id)).where(eq(task.id, id));
   if (!hit) notFound();
   const t = hit.t;
   // personal tasks: only their owner. Team tasks: members can read; people with "Create & assign tasks" can edit.
@@ -50,7 +50,7 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
   }
   const teamInfo = t.teamId && hit.team
     ? {
-        id: hit.team.id, name: hit.team.name, color: hit.team.color,
+        id: hit.team.id, name: hit.team.name, color: hit.team.color, importanceColors: hit.team.importanceColors,
         members: await db.select({ id: teamMember.id, name: sql<string>`coalesce(nullif(${teamMember.nickname}, ''), ${teamMember.name})` }).from(teamMember).where(eq(teamMember.teamId, t.teamId)).orderBy(asc(teamMember.name)),
         assigned: await db.select({ memberId: assignment.memberId, doneAt: assignment.doneAt, notifiedAt: assignment.notifiedAt }).from(assignment).where(eq(assignment.taskId, t.id)),
       }
@@ -65,9 +65,9 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
     <TaskEditor
       id={t.id}
       goals={goals}
-      team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, members: teamInfo.members, done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
+      team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, importanceColors: teamInfo.importanceColors ?? null, members: teamInfo.members, done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
       initial={{
-        title: t.title, notes: t.notes ?? null, status: t.status, goalId: t.goalId,
+        title: t.title, notes: t.notes ?? null, status: t.status, importance: t.importance, goalId: t.goalId,
         dueDate: due?.date ?? null, dueTime: t.hasTime ? due!.time : null,
         checklist: items.map((c) => ({ text: c.text, done: c.done })),
         links: links.map((l) => ({ title: l.title, url: l.url })),

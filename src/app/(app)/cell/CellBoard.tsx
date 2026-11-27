@@ -1,4 +1,5 @@
 "use client";
+import { ImportanceTag } from "@/components/app/ImportanceTag";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
@@ -12,7 +13,7 @@ import { Bee } from "@/components/brand/Bee";
 import { GoalDialog, type GoalDialogMode } from "./GoalDialog";
 
 export type GoalView = { id: string; title: string; level: "year" | "month" | "week"; parentId: string | null; period: string; manualProgress: number; done: boolean; progress: number };
-export type TaskView = { id: string; title: string; status: "todo" | "doing" | "done"; goalId: string | null; dueAt: string | null; hasTime: boolean };
+export type TaskView = { id: string; title: string; status: "todo" | "doing" | "done"; goalId: string | null; dueAt: string | null; hasTime: boolean; importance: number };
 
 const LEVEL = { year: "Year goal", month: "Month goal", week: "Week goal" } as const;
 
@@ -238,6 +239,7 @@ export function TaskRow({ task: t, tz }: { task: TaskView; tz: string }) {
       <HexCheck checked={done} label={`Mark “${t.title || "Untitled task"}” done`} onChange={(v) => { setDone(v); start(() => setTaskStatus(t.id, v ? "done" : "todo")); }} />
       <Link href={`/tasks/${t.id}`} className="min-h-11 flex-1 py-2 hover:underline">
         <span className={done ? "text-muted line-through" : undefined}>{t.title || "Untitled task"}</span>
+        {t.importance > 0 && <ImportanceTag level={t.importance} className="ml-2 align-middle" />}
         {t.dueAt && (
           <span className={`ml-2 inline-block text-sm whitespace-nowrap ${overdue ? "text-danger" : "text-muted"}`}>
             {overdue ? "Overdue, " : ""}{formatDue(new Date(t.dueAt), t.hasTime, tz)}
