@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { BottomNav, BottomNavView, Sidebar, SidebarView } from "@/components/app/Nav";
+import { NavTracker } from "@/components/app/NavTracker";
 import { getSession } from "@/lib/auth";
 import { profileImages } from "@/lib/profile";
 
@@ -11,6 +12,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <Suspense fallback={<SidebarView path="" me={null} />}><SidebarWithMe /></Suspense>
       <div id="content" tabIndex={-1} className="min-w-0 flex-1 pb-24 outline-none md:pb-0">{children}</div>
       <Suspense fallback={<BottomNavView path="" />}><BottomNav /></Suspense>
+      <Suspense fallback={null}><NavTracker /></Suspense>
     </div>
   );
 }

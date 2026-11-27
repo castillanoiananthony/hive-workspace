@@ -5,11 +5,11 @@ import { NextResponse, type NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   const signedIn = Boolean(getSessionCookie(request));
   const { pathname } = request.nextUrl;
-  if (pathname === "/login") return signedIn ? NextResponse.redirect(new URL("/cell", request.url)) : NextResponse.next();
+  if (pathname === "/login") return signedIn ? NextResponse.redirect(new URL("/home", request.url)) : NextResponse.next();
   if (!signedIn) return NextResponse.redirect(new URL("/login", request.url));
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/login", "/onboarding", "/cell/:path*", "/hive/:path*", "/calendar/:path*", "/settings/:path*", "/tasks/:path*", "/profile/:path*", "/tutorial/:path*"],
+  matcher: ["/", "/home", "/login", "/onboarding", "/cell/:path*", "/hive/:path*", "/calendar/:path*", "/settings/:path*", "/tasks/:path*", "/profile/:path*", "/tutorial/:path*"],
 };

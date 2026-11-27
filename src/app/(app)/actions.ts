@@ -38,7 +38,7 @@ export async function createFirstTeam(name: string) {
 export async function finishOnboarding() {
   const me = await requireUser();
   await db.update(user).set({ onboardedAt: new Date() }).where(eq(user.id, me.id));
-  redirect("/cell");
+  redirect("/home");
 }
 
 export async function saveTheme(settings: ThemeSettings) {

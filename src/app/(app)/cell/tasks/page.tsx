@@ -5,13 +5,16 @@ import { db } from "@/db";
 import { goal, task } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { TaskList } from "./TaskList";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
+import { BackButton } from "@/components/app/BackButton";
 
 export const metadata: Metadata = { title: "All tasks" };
 
 export default function TasksPage() {
   return (
     <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
-      <Suspense fallback={<p className="text-muted">Loading tasks…</p>}>
+      <BackButton fallback="/cell" />
+      <Suspense fallback={<HoneyLoader label="Loading tasks…" />}>
         <Tasks />
       </Suspense>
     </main>

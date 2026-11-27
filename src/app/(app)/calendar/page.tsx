@@ -4,13 +4,16 @@ import { datedTasks } from "@/lib/calendar-data";
 import { utcToZoned } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import { HiveCalendar } from "./HiveCalendar";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
+import { BackButton } from "@/components/app/BackButton";
 
 export const metadata: Metadata = { title: "Calendar" };
 
 export default function CalendarPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
-      <Suspense fallback={<p className="text-muted">Loading your calendar…</p>}>
+      <BackButton fallback="/home" />
+      <Suspense fallback={<HoneyLoader label="Loading your calendar…" />}>
         <Cal />
       </Suspense>
     </main>

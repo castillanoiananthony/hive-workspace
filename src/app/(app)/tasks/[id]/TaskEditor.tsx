@@ -5,6 +5,7 @@ import { Placeholder } from "@tiptap/extensions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { BackButton } from "@/components/app/BackButton";
 import { HexCheck } from "@/components/app/HexCheck";
 import { deleteTask, saveTask, type TaskDoc } from "../../cell/actions";
 import { saveAsTemplate, sendAssignmentEmails } from "../../hive/actions";
@@ -102,6 +103,15 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
     return () => window.removeEventListener("beforeunload", warn);
   }, [save]);
 
+  // "Done": changes already save themselves; this saves anything still waiting and takes you back
+  const [finishing, setFinishing] = useState(false);
+  async function finish() {
+    setFinishing(true);
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; await flush(); }
+    if (Number(sessionStorage.getItem("hive-pages") ?? 0) > 1) router.back();
+    else router.push(team ? `/hive/${team.id}` : "/cell");
+  }
+
   async function remove() {
     if (!confirm("Delete this task? You can undo right after.")) return;
     if (timer.current) clearTimeout(timer.current);
@@ -115,11 +125,17 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
 
   return (
     <article>
-      <div className="mb-6 flex items-center justify-between gap-4 text-sm">
-        <Link href={team ? `/hive/${team.id}` : "/cell"} className="min-h-11 py-2 text-muted hover:text-ink">← {team ? team.name : "My Cell"}</Link>
-        <p aria-live="polite" className={save === "error" ? "text-danger" : "text-muted"}>
-          {save === "saved" ? "Saved" : save === "saving" ? "Saving…" : save === "error" ? "Couldn't save. Check your connection." : "Unsaved changes"}
-        </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+        <BackButton fallback={team ? `/hive/${team.id}` : "/cell"} label={team ? `Back to ${team.name}` : "Back"} />
+        <div className="flex items-center gap-3">
+          <p aria-live="polite" className={save === "error" ? "text-danger" : "text-muted"}>
+            {save === "saved" ? "Saved" : save === "saving" ? "Saving…" : save === "error" ? "Couldn't save. Check your connection." : "Unsaved changes"}
+          </p>
+          <button type="button" onClick={finish} disabled={finishing} title="Save and go back"
+            className="min-h-11 rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60">
+            {finishing ? "Saving…" : "Done"}
+          </button>
+        </div>
       </div>
 
       <h1 className="sr-only">{doc.title || "Untitled task"}</h1>
@@ -249,6 +265,7 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
 
       <div className="mt-12 border-t border-line pt-6">
         <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={finish} disabled={finishing} className="min-h-11 rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60">{finishing ? "Saving…" : "Done"}</button>
           {team && (
             <button type="button" disabled={templated} onClick={async () => { if (timer.current) { clearTimeout(timer.current); await flush(); } await saveAsTemplate(id); setTemplated(true); }}
               className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-sm font-medium hover:border-accent-edge disabled:opacity-60">

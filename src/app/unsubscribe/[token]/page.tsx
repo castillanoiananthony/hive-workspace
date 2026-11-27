@@ -3,13 +3,14 @@ import { Suspense } from "react";
 import { PublicCard } from "@/components/app/PublicCard";
 import { findMember } from "@/lib/teammate";
 import { UnsubscribeClient } from "./UnsubscribeClient";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
 
 export const metadata: Metadata = { title: "Email settings", robots: { index: false, follow: false } };
 
 export default function UnsubscribePage({ params }: PageProps<"/unsubscribe/[token]">) {
   return (
     <PublicCard>
-      <Suspense fallback={<p className="text-muted">Loading…</p>}>
+      <Suspense fallback={<HoneyLoader label="Loading…" />}>
         <Body params={params} />
       </Suspense>
     </PublicCard>

@@ -6,14 +6,17 @@ import { signOut } from "../actions";
 import { NameField } from "./NameField";
 import { Appearance } from "./Appearance";
 import { CalendarFeed } from "./CalendarFeed";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
+import { BackButton } from "@/components/app/BackButton";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default function SettingsPage() {
   return (
     <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
+      <BackButton fallback="/home" />
       <h1 className="font-display text-3xl font-semibold">Settings</h1>
-      <Suspense fallback={<p className="mt-6 text-muted">Loading…</p>}>
+      <Suspense fallback={<HoneyLoader label="Loading…" />}>
         <Body />
       </Suspense>
     </main>

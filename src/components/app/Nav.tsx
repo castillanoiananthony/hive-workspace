@@ -5,11 +5,12 @@ import { HexBadge } from "@/components/app/HexBadge";
 import { hexPoints } from "@/components/brand/Bee";
 import { Logo } from "@/components/brand/Logo";
 
-type IconName = "cell" | "hive" | "calendar" | "settings" | "learn" | "me";
+type IconName = "home" | "cell" | "hive" | "calendar" | "settings" | "learn" | "me";
 type Item = { href: string; label: string; icon: IconName; hint: string };
 
 // Main places, in the order people use them; "Learn" and settings sit apart so the first three stay obvious.
 const MAIN: Item[] = [
+  { href: "/home", label: "Home", icon: "home", hint: "Your feed and what's coming up" },
   { href: "/cell", label: "My Cell", icon: "cell", hint: "Your goals and tasks" },
   { href: "/hive", label: "The Hive", icon: "hive", hint: "Your teams" },
   { href: "/calendar", label: "Calendar", icon: "calendar", hint: "Everything with a due date" },
@@ -18,7 +19,7 @@ const MORE: Item[] = [
   { href: "/tutorial", label: "Tutorial", icon: "learn", hint: "How everything works" },
   { href: "/settings", label: "Settings", icon: "settings", hint: "Theme, text size, calendar link" },
 ];
-const MOBILE: Item[] = [...MAIN, { href: "/tutorial", label: "Learn", icon: "learn", hint: "" }, { href: "/profile", label: "Me", icon: "me", hint: "" }];
+const MOBILE: Item[] = [...MAIN, { href: "/profile", label: "Me", icon: "me", hint: "" }]; // Tutorial and Settings live under Me
 
 export type Me = { name: string; email: string; avatar: string | null };
 
@@ -26,6 +27,7 @@ function Icon({ name }: { name: IconName }) {
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden>
+      {name === "home" && <g {...common}><path d="M4 11l8-7 8 7" /><path d="M6 9.5V20h12V9.5" /><path d="M10 20v-5h4v5" /></g>}
       {name === "cell" && <polygon points={hexPoints(12, 12, 9)} {...common} />}
       {name === "hive" && (
         <g {...common}>
@@ -66,7 +68,7 @@ export const BottomNav = () => <BottomNavView path={usePathname()} />;
 export function SidebarView({ path, me }: { path: string; me: Me | null }) {
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
-      <Link href="/cell" className="mb-8 px-3 whitespace-nowrap"><Logo size={26} /></Link>
+      <Link href="/home" className="mb-8 px-3 whitespace-nowrap"><Logo size={26} /></Link>
       <nav aria-label="Main" className="grid gap-1">{MAIN.map((i) => <NavLink key={i.href} item={i} path={path} />)}</nav>
       <nav aria-label="Help and settings" className="mt-6 grid gap-1 border-t border-line pt-6">{MORE.map((i) => <NavLink key={i.href} item={i} path={path} />)}</nav>
       <div className="mt-auto grid gap-2">
@@ -87,7 +89,7 @@ export function BottomNavView({ path }: { path: string }) {
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
       {MOBILE.map((i) => {
-        const on = active(path, i.href) || (i.href === "/profile" && active(path, "/settings"));
+        const on = active(path, i.href) || (i.href === "/profile" && (active(path, "/settings") || active(path, "/tutorial")));
         return (
           <Link key={i.href} href={i.href} aria-current={on ? "page" : undefined}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${on ? "text-ink" : "text-muted"}`}>

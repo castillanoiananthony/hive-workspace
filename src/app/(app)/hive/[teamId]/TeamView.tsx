@@ -28,7 +28,6 @@ export function TeamView(props: { team: Team; members: Member[]; tasks: Task[]; 
   const open = tasks.filter((t) => t.status !== "done").length;
   return (
     <>
-      <Link href="/hive" className="text-sm text-muted hover:text-ink">← The Hive</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <HexBadge label={team.name} color={team.color} size={56} />

@@ -7,13 +7,16 @@ import { goal, task } from "@/db/schema";
 import { computeProgress, forgottenGoals } from "@/lib/progress";
 import { requireUser } from "@/lib/session";
 import { CellBoard } from "./CellBoard";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
+import { BackButton } from "@/components/app/BackButton";
 
 export const metadata: Metadata = { title: "My Cell" };
 
 export default function CellPage() {
   return (
     <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
-      <Suspense fallback={<p className="text-muted">Loading your cell…</p>}>
+      <BackButton fallback="/home" />
+      <Suspense fallback={<HoneyLoader label="Loading your cell…" />}>
         <Cell />
       </Suspense>
     </main>

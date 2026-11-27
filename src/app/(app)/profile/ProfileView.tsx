@@ -6,6 +6,7 @@ import { HexBadge } from "@/components/app/HexBadge";
 import { shrinkImage } from "@/lib/shrink-image";
 import { signOut } from "../actions";
 import { removeProfileImage, updateProfile, uploadProfileImage } from "./actions";
+import { ImageAdjuster } from "./ImageAdjuster";
 
 type Props = { name: string; email: string; bio: string; avatar: string | null; banner: string | null; since: string; stats: { goals: number; done: number; teams: number } };
 
@@ -16,6 +17,9 @@ export function ProfileView(p: Props) {
   const [pending, start] = useTransition();
   const avatarInput = useRef<HTMLInputElement>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
+  // a chosen file (or the current picture) opens the adjuster first; Save there uploads the cropped result
+  const [adjust, setAdjust] = useState<{ kind: "avatar" | "banner"; src: string } | null>(null);
+  const pick = (kind: "avatar" | "banner", file: File | undefined) => { if (file) setAdjust({ kind, src: URL.createObjectURL(file) }); };
 
   function upload(kind: "avatar" | "banner", file: File | undefined) {
     if (!file) return;
@@ -24,7 +28,7 @@ export function ProfileView(p: Props) {
       try {
         const form = new FormData();
         form.set("kind", kind);
-        form.set("file", await shrinkImage(file, kind === "avatar" ? 800 : 2400));
+        form.set("file", await shrinkImage(file, kind === "avatar" ? 800 : 1600));
         await uploadProfileImage(form);
         setMsg(kind === "avatar" ? "Profile picture updated." : "Banner updated.");
         router.refresh();
@@ -49,6 +53,7 @@ export function ProfileView(p: Props) {
             <button type="button" disabled={pending} onClick={() => bannerInput.current?.click()} className="min-h-11 rounded-[var(--radius)] bg-bg/80 px-3 text-sm font-medium backdrop-blur hover:bg-bg">
               {p.banner ? "Change banner" : "Add a banner"}
             </button>
+            {p.banner && <button type="button" disabled={pending} onClick={() => setAdjust({ kind: "banner", src: p.banner! })} className="min-h-11 rounded-[var(--radius)] bg-bg/80 px-3 text-sm font-medium backdrop-blur hover:bg-bg">Adjust</button>}
             {p.banner && <button type="button" disabled={pending} onClick={() => remove("banner")} className="min-h-11 rounded-[var(--radius)] bg-bg/80 px-3 text-sm backdrop-blur hover:bg-bg">Remove</button>}
           </div>
         </div>
@@ -65,14 +70,20 @@ export function ProfileView(p: Props) {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={pending} onClick={() => avatarInput.current?.click()} className={btn}>{p.avatar ? "Change picture" : "Add a picture"}</button>
+            {p.avatar && <button type="button" disabled={pending} onClick={() => setAdjust({ kind: "avatar", src: p.avatar! })} className={btn}>Adjust picture</button>}
             {p.avatar && <button type="button" disabled={pending} onClick={() => remove("avatar")} className="min-h-11 px-2 text-sm text-muted hover:text-danger">Remove picture</button>}
             {!editing && <button type="button" onClick={() => setEditing(true)} className="min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover">Edit profile</button>}
           </div>
         </div>
-        <input ref={avatarInput} type="file" accept="image/*" className="sr-only" aria-label="Choose a profile picture" onChange={(e) => { upload("avatar", e.target.files?.[0]); e.target.value = ""; }} />
-        <input ref={bannerInput} type="file" accept="image/*" className="sr-only" aria-label="Choose a banner" onChange={(e) => { upload("banner", e.target.files?.[0]); e.target.value = ""; }} />
+        <input ref={avatarInput} type="file" accept="image/*" className="sr-only" aria-label="Choose a profile picture" onChange={(e) => { pick("avatar", e.target.files?.[0]); e.target.value = ""; }} />
+        <input ref={bannerInput} type="file" accept="image/*" className="sr-only" aria-label="Choose a banner" onChange={(e) => { pick("banner", e.target.files?.[0]); e.target.value = ""; }} />
       </section>
       <p role="status" className="mt-3 min-h-6 text-sm text-muted">{msg}</p>
+      {adjust && (
+        <ImageAdjuster kind={adjust.kind} src={adjust.src}
+          onCancel={() => setAdjust(null)}
+          onSave={(file) => { const k = adjust.kind; setAdjust(null); upload(k, file); }} />
+      )}
 
       <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section aria-labelledby="about-h" className="rounded-[var(--radius)] border border-line bg-surface p-5 sm:p-6">

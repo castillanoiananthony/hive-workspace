@@ -8,13 +8,16 @@ import { db } from "@/db";
 import { task, team, teamMember } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { NewTeamButton } from "./NewTeam";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
+import { BackButton } from "@/components/app/BackButton";
 
 export const metadata: Metadata = { title: "The Hive" };
 
 export default function HivePage() {
   return (
     <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
-      <Suspense fallback={<p className="text-muted">Loading your teams…</p>}>
+      <BackButton fallback="/home" />
+      <Suspense fallback={<HoneyLoader label="Loading your teams…" />}>
         <Teams />
       </Suspense>
     </main>

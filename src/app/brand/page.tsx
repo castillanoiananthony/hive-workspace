@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bee, type BeePose } from "@/components/brand/Bee";
 import { HexProgress } from "@/components/brand/HexProgress";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { Logo, LogoMark } from "@/components/brand/Logo";
 import { ThemePreview } from "./ThemePreview";
 
@@ -63,6 +64,14 @@ export default function BrandPage() {
         <h2 id="progress" className="font-display mb-6 text-xl font-semibold">Progress cell</h2>
         <div className="flex flex-wrap items-center gap-8 rounded-[var(--radius)] border border-line bg-surface p-6">
           {[0, 25, 60, 100].map((v) => <HexProgress key={v} value={v} label={`${v} percent`} />)}
+        </div>
+      </section>
+
+      <section aria-labelledby="loading" className="mb-14">
+        <h2 id="loading" className="font-display mb-6 text-xl font-semibold">Loading</h2>
+        <div className="flex flex-wrap items-center gap-10 rounded-[var(--radius)] border border-line bg-surface p-6">
+          <HoneyLoader inline label="Loading your feed…" />
+          <HoneyLoader inline size={32} label="Small" />
         </div>
       </section>
 

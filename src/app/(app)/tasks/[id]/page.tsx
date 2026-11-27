@@ -7,13 +7,14 @@ import { assignment, checklistItem, goal, task, taskLink, team, teamMember } fro
 import { utcToZoned } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import { TaskEditor } from "./TaskEditor";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
 
 export const metadata: Metadata = { title: "Task" };
 
 export default function TaskPage({ params }: PageProps<"/tasks/[id]">) {
   return (
     <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
-      <Suspense fallback={<p className="text-muted">Opening task…</p>}>
+      <Suspense fallback={<HoneyLoader label="Opening task…" />}>
         <Task params={params} />
       </Suspense>
     </main>

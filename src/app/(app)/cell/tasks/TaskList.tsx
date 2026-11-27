@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
 import { newTask } from "../actions";
@@ -35,7 +34,6 @@ export function TaskList({ tasks, goals, tz }: { tasks: (TaskView & { updatedAt:
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/cell" className="text-sm text-muted hover:text-ink">← My Cell</Link>
           <h1 className="font-display mt-1 text-3xl font-semibold">All tasks</h1>
         </div>
         <button type="button" disabled={pending} onClick={() => start(() => newTask())} className="min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover">New task</button>

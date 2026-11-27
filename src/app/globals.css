@@ -93,3 +93,15 @@ body { font-family: var(--font-sans); font-size: 1rem; line-height: 1.55; -webki
 .legal h2 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; margin-top: 0.75rem; }
 .legal ul { list-style: disc; padding-left: 1.25rem; display: grid; gap: 0.5rem; }
 .legal a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Honey loader: the cell fills from the bottom, holds, drains, repeats. Wave rides on top. */
+@keyframes honey-fill { 0% { transform: translateY(100%); } 70% { transform: translateY(0); } 85% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+@keyframes honey-wave { from { transform: translate(0, var(--wy)); } to { transform: translate(50px, var(--wy)); } }
+@keyframes honey-wave-y { 0% { --wy: 94px; } 70% { --wy: -6px; } 85% { --wy: -6px; } 100% { --wy: 94px; } }
+@property --wy { syntax: "<length>"; inherits: false; initial-value: 94px; }
+.honey-loader-fill { transform-box: view-box; animation: honey-fill 2.2s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+.honey-loader-wave { animation: honey-wave 0.9s linear infinite, honey-wave-y 2.2s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .honey-loader-fill { animation: none; transform: translateY(45%); }
+  .honey-loader-wave { animation: none; transform: translate(0, 39px); }
+}

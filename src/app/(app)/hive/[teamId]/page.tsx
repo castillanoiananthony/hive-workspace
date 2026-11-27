@@ -6,13 +6,16 @@ import { db } from "@/db";
 import { assignment, emailLog, task, team, teamMember, template } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { TeamView } from "./TeamView";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
+import { BackButton } from "@/components/app/BackButton";
 
 export const metadata: Metadata = { title: "Team" };
 
 export default function TeamPage({ params }: PageProps<"/hive/[teamId]">) {
   return (
     <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
-      <Suspense fallback={<p className="text-muted">Loading team…</p>}>
+      <BackButton fallback="/hive" />
+      <Suspense fallback={<HoneyLoader label="Loading team…" />}>
         <Team params={params} />
       </Suspense>
     </main>

@@ -11,7 +11,7 @@ export function LoginForm({ google }: { google: boolean }) {
     e.preventDefault();
     const email = String(new FormData(e.currentTarget).get("email") ?? "").trim();
     setState({ kind: "sending" });
-    const { error } = await authClient.signIn.magicLink({ email, callbackURL: "/cell", newUserCallbackURL: "/onboarding" });
+    const { error } = await authClient.signIn.magicLink({ email, callbackURL: "/home", newUserCallbackURL: "/onboarding" });
     setState(error ? { kind: "error", message: error.message ?? "We couldn't send the link. Check the address and try again." } : { kind: "sent", email });
   }
 
@@ -49,7 +49,7 @@ export function LoginForm({ google }: { google: boolean }) {
         <>
           <div className="flex items-center gap-3 text-sm text-muted" aria-hidden><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div>
           <button
-            type="button" onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/cell" })}
+            type="button" onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/home", newUserCallbackURL: "/onboarding" })}
             className="min-h-12 rounded-[var(--radius)] border border-line font-medium hover:border-accent"
           >
             Continue with Google

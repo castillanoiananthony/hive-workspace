@@ -6,13 +6,16 @@ import { goal, task, team } from "@/db/schema";
 import { profileImages } from "@/lib/profile";
 import { requireUser } from "@/lib/session";
 import { ProfileView } from "./ProfileView";
+import { HoneyLoader } from "@/components/app/HoneyLoader";
+import { BackButton } from "@/components/app/BackButton";
 
 export const metadata: Metadata = { title: "Profile" };
 
 export default function ProfilePage() {
   return (
     <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
-      <Suspense fallback={<p className="text-muted">Loading your profile…</p>}>
+      <BackButton fallback="/home" />
+      <Suspense fallback={<HoneyLoader label="Loading your profile…" />}>
         <Profile />
       </Suspense>
     </main>

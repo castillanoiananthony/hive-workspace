@@ -21,6 +21,6 @@ export default function OnboardingPage() {
 
 async function Gate() {
   const me = await requireUser();
-  if (me.onboardedAt) redirect("/cell");
+  if (me.onboardedAt) redirect("/home");
   return <Wizard firstName={me.name.split(" ")[0] || ""} />;
 }

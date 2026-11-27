@@ -144,7 +144,7 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
 }
 
 /** Points new people to the tutorial until they've read some of it or said no thanks. */
-function TourCard() {
+export function TourCard() {
   const [show, setShow] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setShow(!localStorage.getItem("hive-tour-dismissed") && JSON.parse(localStorage.getItem("hive-tutorial-read") ?? "[]").length < 3));
@@ -248,7 +248,7 @@ export function TaskRow({ task: t, tz }: { task: TaskView; tz: string }) {
   );
 }
 
-function QuickAdd({ tz }: { tz: string }) {
+export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label?: string }) {
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<{ text: string; id?: string } | null>(null);
   const [pending, start] = useTransition();
@@ -272,7 +272,7 @@ function QuickAdd({ tz }: { tz: string }) {
 
   return (
     <form onSubmit={submit} className="mt-6">
-      <label htmlFor="quick" className="text-sm font-medium">Quick add a task</label>
+      <label htmlFor="quick" className="text-sm font-medium">{label}</label>
       <div className="mt-2 flex gap-2">
         <input
           ref={input} id="quick" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Submit lab report Fri 5pm" autoComplete="off"
