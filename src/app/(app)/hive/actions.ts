@@ -17,7 +17,7 @@ import { newToken } from "@/lib/tokens";
 const text = (s: unknown, max = 200) => String(s ?? "").trim().slice(0, max);
 const color = (c: unknown) => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toUpperCase() : TEAM_COLORS[0]);
 const cleanPerms = (p: unknown): Perm[] => (Array.isArray(p) ? ALL_PERMS.filter((k) => p.includes(k)) : []);
-const refresh = (teamId?: string) => { revalidatePath("/hive"); if (teamId) revalidatePath(`/hive/${teamId}`); };
+const refresh = (teamId?: string) => { revalidatePath("/hive"); if (teamId) { revalidatePath(`/hive/${teamId}`); revalidatePath(`/hive/${teamId}/progress`); } };
 
 async function memberOf(memberId: string) {
   const [m] = await db.select().from(teamMember).where(eq(teamMember.id, memberId));

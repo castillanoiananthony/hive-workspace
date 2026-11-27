@@ -55,7 +55,7 @@ export function Comb({ team, members, tasks, stream, me }: { team: TeamT; member
         <div className="mt-6 rounded-[var(--radius)] border border-line bg-surface p-6 text-center">
           <div className="flex justify-center"><Bee pose="sleep" size={80} /></div>
           <p className="font-display mt-2 text-lg font-semibold">The Comb is quiet</p>
-          <p className="mt-1 text-muted">Post the first update. New tasks and finished work show up here too.</p>
+          <p className="mt-1 text-muted">Post the first update for the team. Task progress lives in the Activity tab.</p>
         </div>
       ) : (
         <ol className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3">
@@ -83,7 +83,7 @@ export function Comb({ team, members, tasks, stream, me }: { team: TeamT; member
                   {/* the post gets the card's full width, not a column squeezed beside the picture */}
                   {s.kind === "post" && <p className="mt-3 max-w-[70ch] whitespace-pre-line break-words">{s.body}</p>}
                   {/* actions under the post, so the name and time keep the full width on phones */}
-                  <div className="mt-1 flex justify-end empty:hidden">
+                  <div className="mt-4 flex justify-end gap-2 empty:hidden">
                     {s.kind === "post" && has(me, "hide") && (
                       <button type="button" disabled={pending} onClick={() => start(async () => { await hideCombPost(s.id, !s.hidden); router.refresh(); })} className="min-h-11 shrink-0 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">{s.hidden ? "Unhide" : "Hide"}</button>
                     )}

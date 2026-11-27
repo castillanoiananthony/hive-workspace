@@ -65,7 +65,7 @@ export function TeamView(props: Props) {
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
         {tab === "board" && <Board {...props} onRoster={() => setTab("members")} />}
         {tab === "calendar" && (props.calendar.length ? <HiveCalendar tasks={props.calendar} tz={props.tz} editable={has(me, "tasks")} embedded /> : <p className="rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">No team tasks have a due date yet. Give one a date and it shows up here.</p>)}
-        {tab === "activity" && <Activity tasks={tasks} assigned={props.assigned} members={members} days={props.days} logs={props.logs} />}
+        {tab === "activity" && <Activity team={team} tasks={tasks} assigned={props.assigned} members={members} days={props.days} logs={props.logs} tz={props.tz} />}
         {tab === "vault" && <Vault team={team} links={props.links} members={members} me={me} />}
         {tab === "hierarchy" && <Hierarchy team={team} members={members} roles={props.roles} me={me} />}
         {tab === "members" && <Members team={team} members={members} roles={props.roles} me={me} />}

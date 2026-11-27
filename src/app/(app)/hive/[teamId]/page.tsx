@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BackButton } from "@/components/app/BackButton";
@@ -54,7 +54,6 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
     userIds.length ? db.select({ userId: userImage.userId, updatedAt: userImage.updatedAt }).from(userImage).where(and(eq(userImage.kind, "avatar"), inArray(userImage.userId, userIds))) : Promise.resolve([]),
   ]);
   const avatarOf = (userId: string | null) => { const a = avatars.find((x) => x.userId === userId); return a ? `/api/profile-image/${userId}/avatar?v=${a.updatedAt.getTime()}` : null; };
-  const doneMarks = taskIds.length ? await db.select({ taskId: assignment.taskId, memberId: assignment.memberId, at: assignment.doneAt }).from(assignment).where(and(inArray(assignment.taskId, taskIds), isNotNull(assignment.doneAt))) : [];
 
   const logs = await db.select({ id: progressLog.id, taskId: assignment.taskId, memberId: assignment.memberId, progress: progressLog.progress, done: progressLog.done, note: progressLog.note, at: progressLog.createdAt })
     .from(progressLog).innerJoin(assignment, eq(progressLog.assignmentId, assignment.id))
@@ -80,9 +79,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
       assigned={assigned.map((a) => ({ ...a, doneAt: a.doneAt?.toISOString() ?? null }))}
       stream={[
         ...posts.map((p) => ({ kind: "post" as const, id: p.id, at: p.createdAt.toISOString(), memberId: p.memberId, body: p.body, hidden: Boolean(p.hiddenAt) })),
-        ...doneMarks.map((d) => ({ kind: "done" as const, id: `d-${d.taskId}-${d.memberId}`, at: d.at!.toISOString(), memberId: d.memberId, taskId: d.taskId })),
-        ...tasks.filter((x) => x.title).map((x) => ({ kind: "task" as const, id: `t-${x.id}`, at: x.createdAt.toISOString(), memberId: null, taskId: x.id })),
-      ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60)}
+      ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60)} // posts only: task progress is in the Activity tab
       log={log.map((l) => ({ id: l.id, kind: l.kind, recipient: l.recipient, status: l.status, error: l.error, name: l.name, task: l.task, at: (l.sentAt ?? l.at).toISOString() }))}
       templates={templates.map((tp) => ({ id: tp.id, title: tp.title, recurrence: tp.recurrence, weekday: tp.weekday, monthDay: tp.monthDay, dueTime: tp.dueTime, assignAll: tp.assignAll, memberIds: tp.memberIds, checklist: tp.content.checklist.length, links: tp.content.links.length }))}
     />

@@ -1,13 +1,17 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { nameOf, type AssignedT, type LogT, type MemberT, type TaskT } from "./types";
+import { ImportanceTag } from "@/components/app/ImportanceTag";
+import { MemberAvatar } from "./MemberAvatar";
+import { Bar, fmtDay, pctOf } from "./MyProgress";
+import { nameOf, type AssignedT, type LogT, type MemberT, type TaskT, type TeamT } from "./types";
 
 export type DayT = { date: string; label: string; done: number; created: number; posts: number; updates: number };
 const C = { todo: "var(--viz-1)", doing: "var(--viz-2)", done: "var(--viz-3)" } as const;
 const card = "rounded-[calc(var(--radius)*2)] border border-line bg-surface p-5 sm:p-6";
 
 /** Team activity: where the tasks stand (donut), who has done what (bars), and the last 14 days (lines). */
-export function Activity({ tasks, assigned, members, days, logs }: { tasks: TaskT[]; assigned: AssignedT[]; members: MemberT[]; days: DayT[]; logs: LogT[] }) {
+export function Activity({ team, tasks, assigned, members, days, logs, tz }: { team: TeamT; tasks: TaskT[]; assigned: AssignedT[]; members: MemberT[]; days: DayT[]; logs: LogT[]; tz: string }) {
   const status = (["todo", "doing", "done"] as const).map((k) => ({ k, n: tasks.filter((t) => t.status === k).length }));
   const people = members.map((m) => {
     const mine = assigned.filter((a) => a.memberId === m.id);
@@ -37,6 +41,8 @@ export function Activity({ tasks, assigned, members, days, logs }: { tasks: Task
         <h2 id="line-h" className="font-display text-lg font-semibold">The last 14 days</h2>
         <Lines days={days} />
       </section>
+      <TaskProgress team={team} tasks={tasks} assigned={assigned} members={members} logs={logs} tz={tz} />
+      <AllLogs tasks={tasks} members={members} logs={logs} tz={tz} color={team.color} />
     </div>
   );
 }
@@ -151,5 +157,84 @@ function Lines({ days }: { days: DayT[] }) {
         </div>
       </details>
     </div>
+  );
+}
+
+const who = (members: MemberT[], id: string) => members.find((m) => m.id === id);
+
+/** One card per task: overall progress, each person's bar, and every log recorded on it. */
+function TaskProgress({ team, tasks, assigned, members, logs, tz }: { team: TeamT; tasks: TaskT[]; assigned: AssignedT[]; members: MemberT[]; logs: LogT[]; tz: string }) {
+  if (!tasks.length) return null;
+  return (
+    <section aria-labelledby="tp-h" className="grid gap-3">
+      <h2 id="tp-h" className="font-display text-lg font-semibold">Progress by task</h2>
+      {tasks.map((t) => {
+        const parts = assigned.filter((a) => a.taskId === t.id);
+        const overall = parts.length ? Math.round(parts.reduce((s, a) => s + pctOf(a), 0) / parts.length) : 0;
+        const tl = logs.filter((l) => l.taskId === t.id);
+        return (
+          <details key={t.id} className="group rounded-[calc(var(--radius)*2)] border border-line bg-surface">
+            <summary className="grid cursor-pointer list-none gap-2 px-5 py-4 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-3">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden className="shrink-0 text-muted transition-transform group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
+                <span className="min-w-0 flex-1 font-medium">{t.title || "Untitled task"}</span>
+                <ImportanceTag level={t.importance} colors={team.importanceColors} />
+              </span>
+              <span className="flex items-center gap-3 pl-8"><Bar value={overall} label={`${t.title}: ${overall}% overall`} /><span className="w-12 shrink-0 text-right text-sm tabular-nums">{overall}%</span></span>
+              <span className="pl-8 text-sm text-muted">{parts.filter((a) => a.doneAt).length} of {parts.length} done, {tl.length} {tl.length === 1 ? "log" : "logs"}</span>
+            </summary>
+            <div className="grid gap-5 border-t border-line px-5 py-4">
+              {parts.length > 0 && (
+                <ul className="grid gap-3">
+                  {parts.map((a) => { const m = who(members, a.memberId); return m && (
+                    <li key={a.memberId} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+                      <MemberAvatar m={m} color={team.color} size={32} />
+                      <span className="min-w-0"><span className="block truncate font-medium">{nameOf(m)}</span><Bar value={pctOf(a)} label={`${nameOf(m)}: ${pctOf(a)}%`} /></span>
+                      <span className={`text-sm tabular-nums ${a.doneAt ? "text-success" : "text-muted"}`}>{a.doneAt ? "✓ Done" : `${a.progress}%`}</span>
+                    </li>
+                  ); })}
+                </ul>
+              )}
+              <div>
+                <h3 className="text-sm font-semibold">Recorded logs</h3>
+                {tl.length ? <LogList logs={tl} members={members} tz={tz} color={team.color} /> : <p className="mt-1 text-sm text-muted">Nobody has logged progress on this task yet.</p>}
+              </div>
+              <Link href={`/tasks/${t.id}`} className="inline-flex min-h-11 items-center justify-self-start rounded-[var(--radius)] border border-line px-4 text-sm font-medium hover:border-accent-edge">Open task</Link>
+            </div>
+          </details>
+        );
+      })}
+    </section>
+  );
+}
+
+function LogList({ logs, members, tz, color, showTask }: { logs: LogT[]; members: MemberT[]; tz: string; color: string; showTask?: (id: string) => string }) {
+  return (
+    <ol className="mt-2 grid gap-3 border-l-2 border-line pl-4">
+      {logs.map((l) => { const m = who(members, l.memberId); return (
+        <li key={l.id} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 text-sm">
+          {m ? <MemberAvatar m={m} color={color} size={28} /> : <span className="size-7" />}
+          <div className="min-w-0">
+            <p><span className="font-medium">{m ? nameOf(m) : "Former member"}</span> <span className="font-semibold tabular-nums">{l.done ? "marked it done ✓" : `${l.progress}%`}</span>{showTask && <> on <span className="font-medium">{showTask(l.taskId)}</span></>}</p>
+            {l.note && <p className="mt-0.5 break-words">{l.note}</p>}
+            <p className="text-muted">{fmtDay(l.at, tz)}</p>
+          </div>
+        </li>
+      ); })}
+    </ol>
+  );
+}
+
+/** Every progress log in the team, newest first. */
+function AllLogs({ tasks, members, logs, tz, color }: { tasks: TaskT[]; members: MemberT[]; logs: LogT[]; tz: string; color: string }) {
+  const [n, setN] = useState(20);
+  if (!logs.length) return null;
+  const title = (id: string) => `“${tasks.find((t) => t.id === id)?.title || "a task"}”`;
+  return (
+    <section aria-labelledby="logs-h" className={card}>
+      <h2 id="logs-h" className="font-display text-lg font-semibold">All recorded logs <span className="font-normal text-muted">({logs.length})</span></h2>
+      <LogList logs={logs.slice(0, n)} members={members} tz={tz} color={color} showTask={title} />
+      {logs.length > n && <button type="button" onClick={() => setN((x) => x + 30)} className="mt-4 min-h-11 rounded-[var(--radius)] border border-line px-4 text-sm font-medium hover:border-accent-edge">Show more</button>}
+    </section>
   );
 }

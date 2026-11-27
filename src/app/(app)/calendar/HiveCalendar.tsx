@@ -141,11 +141,11 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
               noEventsContent="No tasks due in this period."
               eventContent={(arg) => arg.view.type === "dayGridMonth"
                 // month view: the task fills the day square, title wraps instead of being cut off
-                ? <div style={{ background: arg.color || undefined, color: arg.contrastColor || undefined }} className="flex min-h-[4.5rem] w-full flex-col justify-start gap-0.5 overflow-hidden rounded-[6px] px-2 py-1.5 text-sm leading-snug font-semibold whitespace-normal sm:min-h-[5.5rem]">
-                    {arg.timeText && <span className="text-xs font-medium opacity-80">{arg.timeText}</span>}
-                    <span className="line-clamp-4 break-words">{arg.event.title}</span>
+                ? <div style={{ background: arg.color || undefined, color: arg.contrastColor || undefined }} className="flex min-h-[3.25rem] w-full flex-col justify-start gap-0.5 overflow-hidden rounded-[5px] px-1 py-1 text-[0.68rem] leading-tight font-semibold whitespace-normal hyphens-auto sm:min-h-[5.5rem] sm:rounded-[6px] sm:px-2 sm:py-1.5 sm:text-sm sm:leading-snug">
+                    {arg.timeText && <span className="text-[0.62rem] font-medium opacity-80 sm:text-xs">{arg.timeText}</span>}
+                    <span className="line-clamp-3 [overflow-wrap:anywhere] sm:line-clamp-4">{arg.event.title}</span>
                   </div>
-                : undefined}
+                : true /* other views: the calendar's own layout */}
             />
           </div>
           <p className="mt-3 text-sm text-muted">On a phone, press and hold a task to drag it, or open it and change the due date.</p>
