@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { BusyOverlay } from "@/components/app/BusyOverlay";
 import { EmptyState } from "@/components/app/EmptyState";
 import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { formatDue } from "@/lib/dates";
@@ -122,6 +123,7 @@ function MyTask({ t, a, logs, tz, colors }: { t: TaskT; a: AssignedT; logs: LogT
   });
   return (
     <li>
+      <BusyOverlay show={pending} label="Saving your progress…" />
       <details className="group">
         <summary className="grid cursor-pointer list-none gap-2 px-5 py-3 hover:bg-raised/50 [&::-webkit-details-marker]:hidden">
           <span className="flex items-center gap-3">

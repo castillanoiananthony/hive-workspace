@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import { BusyOverlay } from "@/components/app/BusyOverlay";
 import { authClient } from "@/lib/auth-client";
 
 type State = { kind: "idle" } | { kind: "sending" } | { kind: "sent"; email: string } | { kind: "error"; message: string };
 
 export function LoginForm({ google }: { google: boolean }) {
   const [state, setState] = useState<State>({ kind: "idle" });
+  const [toGoogle, setToGoogle] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,11 +51,17 @@ export function LoginForm({ google }: { google: boolean }) {
         <>
           <div className="flex items-center gap-3 text-sm text-muted" aria-hidden><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div>
           <button
-            type="button" onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/home", newUserCallbackURL: "/onboarding" })}
-            className="min-h-12 rounded-[var(--radius)] border border-line font-medium hover:border-accent"
+            type="button" disabled={toGoogle}
+            onClick={async () => {
+              setToGoogle(true); // stays up while the browser leaves for Google
+              const r = await authClient.signIn.social({ provider: "google", callbackURL: "/home", newUserCallbackURL: "/onboarding" }).catch(() => null);
+              if (!r || r.error) setToGoogle(false);
+            }}
+            className="min-h-12 rounded-[var(--radius)] border border-line font-medium hover:border-accent disabled:opacity-60"
           >
             Continue with Google
           </button>
+          <BusyOverlay show={toGoogle} label="Taking you to Google…" />
         </>
       )}
     </div>
