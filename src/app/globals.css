@@ -67,3 +67,24 @@ body { font-family: var(--font-sans); font-size: 1rem; line-height: 1.55; -webki
 .task-notes a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
 .task-notes code { background: var(--surface-raised); padding: 0.1em 0.35em; border-radius: 4px; }
 .task-notes p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--text-muted); float: left; height: 0; pointer-events: none; }
+
+/* Calendar: FullCalendar's classic theme, coloured from our tokens so every preset applies */
+.hive-cal {
+  --fc-classic-button: var(--surface-raised); --fc-classic-button-border: var(--border);
+  --fc-classic-button-strong: var(--surface-raised); --fc-classic-button-strong-border: var(--accent-edge);
+  --fc-classic-button-outline: var(--accent); --fc-classic-button-foreground: var(--text);
+  --fc-classic-primary: var(--accent); --fc-classic-primary-foreground: var(--on-accent);
+  --fc-classic-event: var(--accent); --fc-classic-event-contrast: var(--on-accent);
+  --fc-classic-highlight: color-mix(in srgb, var(--accent) 18%, transparent);
+  --fc-classic-today: color-mix(in srgb, var(--accent) 12%, transparent);
+  --fc-classic-now: var(--danger);
+  --fc-classic-background: var(--surface);
+  --fc-classic-faint: color-mix(in srgb, var(--text) 4%, transparent);
+  --fc-classic-muted: color-mix(in srgb, var(--text) 8%, transparent);
+  --fc-classic-strong: color-mix(in srgb, var(--text) 14%, transparent);
+  --fc-classic-foreground: var(--text); --fc-classic-faint-foreground: var(--text-muted); --fc-classic-muted-foreground: var(--text-muted);
+  --fc-classic-border: var(--border); --fc-classic-strong-border: var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.hive-cal .is-done { opacity: 0.55; text-decoration: line-through; }
+.hive-cal a { color: inherit; }

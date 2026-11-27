@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@fullcalendar/react": "^7.1.5",
     "@neon/config": "^1.14.8",
     "@neon/env": "^2.1.11",
     "@tiptap/extensions": "^3.35.0",
@@ -27,7 +28,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "resend": "^6.40.1",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "temporal-polyfill": "^1.0.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

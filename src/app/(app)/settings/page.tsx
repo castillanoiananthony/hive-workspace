@@ -4,6 +4,7 @@ import { DEFAULT_THEME } from "@/lib/themes";
 import { requireUser } from "@/lib/session";
 import { signOut } from "../actions";
 import { Appearance } from "./Appearance";
+import { CalendarFeed } from "./CalendarFeed";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -33,6 +34,7 @@ async function Body() {
         </form>
       </section>
       <Appearance initial={me.theme ?? DEFAULT_THEME} />
+      <CalendarFeed initialToken={me.icsToken} appUrl={process.env.APP_URL ?? "http://localhost:3000"} />
     </div>
   );
 }

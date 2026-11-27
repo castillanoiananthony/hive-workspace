@@ -18,7 +18,7 @@ export const user = pgTable("user", {
   updatedAt: updated(),
   timezone: text("timezone").notNull().default("Asia/Manila"),
   theme: jsonb("theme").$type<ThemeSettings>(),
-  icsTokenHash: text("ics_token_hash").unique(),
+  icsToken: text("ics_token").unique(),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
 });
 

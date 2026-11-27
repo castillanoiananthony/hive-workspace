@@ -69,6 +69,18 @@ describe("quick add", () => {
   it("leaves plain titles alone", () => {
     expect(parseQuickAdd("Read chapter 4", tz, now)).toEqual({ title: "Read chapter 4", dueAt: null, hasTime: false });
   });
+  it("keeps a number that belongs to the title", () => {
+    const r = parseQuickAdd("Read chapter 3 Mar 28", tz, now);
+    expect(r.title).toBe("Read chapter 3");
+    expect(utcToZoned(r.dueAt!, tz).date).toBe("2027-03-28");
+  });
+  it("treats a date a few days ago as overdue, not next year", () => {
+    const r = parseQuickAdd("Org meeting Mar 1 4pm", tz, now);
+    expect(utcToZoned(r.dueAt!, tz)).toEqual({ date: "2027-03-01", time: "16:00" });
+  });
+  it("still sends a long-past month to next year", () => {
+    expect(utcToZoned(parseQuickAdd("Renew passport Jan 10", tz, now).dueAt!, tz).date).toBe("2028-01-10");
+  });
   it("drops a trailing 'by'", () => {
     expect(parseQuickAdd("Send slides by Monday", tz, now).title).toBe("Send slides");
   });
