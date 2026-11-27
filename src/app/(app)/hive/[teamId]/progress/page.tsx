@@ -45,7 +45,7 @@ async function Progress({ params }: { params: PageProps<"/hive/[teamId]/progress
       {rows.length === 0 ? (
         <p className="mt-8 rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">Nothing is assigned to you in this team yet.</p>
       ) : (
-        <ul className="mt-8 divide-y divide-line rounded-[calc(var(--radius)*2)] border border-line bg-surface">
+        <ul className="mt-8 grid gap-3">
           {rows.map(({ a, t: x }, i) => (
             <MyTask key={x.id} open={i === 0 && rows.length <= 3} tz={me.timezone} colors={t.importanceColors ?? null}
               t={{ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime, importance: x.importance }}

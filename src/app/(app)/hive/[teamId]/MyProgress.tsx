@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { BusyOverlay } from "@/components/app/BusyOverlay";
 import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { formatDue } from "@/lib/dates";
+import { importanceOf } from "@/lib/importance";
 import { logProgress } from "../actions";
 import type { AssignedT, LogT, TaskT } from "./types";
 
@@ -34,7 +35,7 @@ export function MyTask({ t, a, logs, tz, colors, open = false }: { t: TaskT; a: 
     catch (e) { setMsg(e instanceof Error ? e.message : "Couldn't save."); }
   });
   return (
-    <li>
+    <li className="overflow-hidden rounded-[calc(var(--radius)*2)] border-2 border-line bg-surface" style={{ borderColor: importanceOf(t.importance, colors)?.color }}>
       <BusyOverlay show={pending} label="Saving your progress…" />
       <details className="group" open={open}>
         <summary className="grid cursor-pointer list-none gap-2 px-5 py-3 hover:bg-raised/50 [&::-webkit-details-marker]:hidden">

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
 import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { formatDue } from "@/lib/dates";
+import { importanceOf } from "@/lib/importance";
 import { newTeamTask } from "../actions";
 import { MemberAvatar } from "./MemberAvatar";
 import { Bar, fmtDay, pctOf } from "./MyProgress";
@@ -55,7 +56,7 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster }
           const overall = avg(parts);
           const overdue = t.status !== "done" && t.dueAt && new Date(t.dueAt).getTime() < now;
           return (
-            <details key={t.id} className="group rounded-[calc(var(--radius)*2)] border border-line bg-surface">
+            <details key={t.id} className="group rounded-[calc(var(--radius)*2)] border-2 border-line bg-surface" style={{ borderColor: importanceOf(t.importance, team.importanceColors)?.color }}>
               <summary className="grid cursor-pointer list-none gap-2 px-5 py-4 [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center gap-3">
                   <Chevron />

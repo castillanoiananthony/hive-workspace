@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ImportanceTag } from "@/components/app/ImportanceTag";
+import { importanceOf } from "@/lib/importance";
 import { MemberAvatar } from "./MemberAvatar";
 import { Bar, fmtDay, pctOf } from "./MyProgress";
 import { nameOf, type AssignedT, type LogT, type MemberT, type TaskT, type TeamT } from "./types";
@@ -173,7 +174,7 @@ function TaskProgress({ team, tasks, assigned, members, logs, tz }: { team: Team
         const overall = parts.length ? Math.round(parts.reduce((s, a) => s + pctOf(a), 0) / parts.length) : 0;
         const tl = logs.filter((l) => l.taskId === t.id);
         return (
-          <details key={t.id} className="group rounded-[calc(var(--radius)*2)] border border-line bg-surface">
+          <details key={t.id} className="group rounded-[calc(var(--radius)*2)] border-2 border-line bg-surface" style={{ borderColor: importanceOf(t.importance, team.importanceColors)?.color }}>
             <summary className="grid cursor-pointer list-none gap-2 px-5 py-4 [&::-webkit-details-marker]:hidden">
               <span className="flex items-center gap-3">
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden className="shrink-0 text-muted transition-transform group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
