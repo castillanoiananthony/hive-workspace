@@ -10,9 +10,9 @@ export default defineConfig({
       return {};
     }
     if (!branch.exists) {
-      // New non-default branches: auto-expire
+      // "dev" is the long-lived branch localhost uses; other new branches auto-expire
       // Run `neon checkout <name>` to create a new branch with these settings
-      return { ttl: "7d" };
+      return branch.name === "dev" ? {} : { ttl: "7d" };
     }
     // Existing branch: no changes
     return {};
