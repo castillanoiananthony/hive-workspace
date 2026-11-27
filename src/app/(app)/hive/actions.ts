@@ -25,18 +25,18 @@ async function memberOf(memberId: string) {
 }
 
 async function starterPlacement(teamId: string) {
-  const [memberRole] = await db.select({ id: teamRole.id, perms: teamRole.perms }).from(teamRole).where(and(eq(teamRole.teamId, teamId), eq(teamRole.name, "Member")));
+  // new people are plain members (no role) until the Leader gives them one
   const [admin] = await db.select({ id: teamMember.id }).from(teamMember).where(and(eq(teamMember.teamId, teamId), eq(teamMember.isAdmin, true)));
-  return { roleId: memberRole?.id ?? null, perms: memberRole?.perms ?? DEFAULT_PERMS, parentId: admin?.id ?? null };
+  return { roleId: null, perms: DEFAULT_PERMS, parentId: admin?.id ?? null };
 }
 
 // ---------- teams ----------
 
-export async function createTeam(input: { name: string; color: string }) {
+export async function createTeam(input: { name: string; color: string; roles?: string[] }) {
   const me = await requireUser();
   const name = text(input.name, 80);
   if (!name) throw new Error("Give your team a name.");
-  const id = await createTeamWithAdmin(me, name, color(input.color));
+  const id = await createTeamWithAdmin(me, name, color(input.color), Array.isArray(input.roles) ? input.roles.map(String) : undefined);
   refresh();
   redirect(`/hive/${id}`);
 }
@@ -162,13 +162,19 @@ export async function saveHierarchy(teamId: string, layout: { id: string; parent
   refresh(teamId);
 }
 
+/** Only the Leader (admin) hands out roles. An empty roleId makes them a plain member again. */
 export async function setMemberRole(memberId: string, roleId: string) {
   const me = await requireUser();
   const m = await memberOf(memberId);
-  await requirePerm(me.id, m.teamId, "hierarchy");
-  if (m.isAdmin) throw new Error("The admin's role can't be changed.");
+  await requireAdmin(me.id, m.teamId);
+  if (m.isAdmin) throw new Error("The Leader's role can't be changed.");
+  if (!roleId) {
+    await db.update(teamMember).set({ roleId: null, perms: DEFAULT_PERMS }).where(eq(teamMember.id, memberId));
+    return refresh(m.teamId);
+  }
   const [r] = await db.select().from(teamRole).where(and(eq(teamRole.id, roleId), eq(teamRole.teamId, m.teamId)));
   if (!r) throw new Error("That role no longer exists.");
+  if (r.isLeader) throw new Error("There's one Leader: the team's admin.");
   await db.update(teamMember).set({ roleId: r.id, perms: r.perms }).where(eq(teamMember.id, memberId)); // a new role resets their powers to the role's
   refresh(m.teamId);
 }
@@ -189,10 +195,17 @@ export async function saveRole(teamId: string, input: { id?: string; name: strin
   const name = text(input.name, 40);
   if (!name) throw new Error("Give the role a name.");
   const perms = cleanPerms(input.perms);
+  const clash = await db.select({ id: teamRole.id }).from(teamRole).where(and(eq(teamRole.teamId, teamId), sql`lower(${teamRole.name}) = ${name.toLowerCase()}`));
+  if (clash.some((c) => c.id !== input.id)) throw new Error(`There's already a role called “${name}”.`);
   if (input.id) {
-    await db.update(teamRole).set({ name, perms }).where(and(eq(teamRole.id, input.id), eq(teamRole.teamId, teamId)));
-    if (input.applyToMembers) await db.update(teamMember).set({ perms }).where(and(eq(teamMember.roleId, input.id), eq(teamMember.isAdmin, false)));
+    const [r] = await db.select().from(teamRole).where(and(eq(teamRole.id, input.id), eq(teamRole.teamId, teamId)));
+    if (!r) throw new Error("That role no longer exists.");
+    if (r.isLeader) { await db.update(teamRole).set({ name }).where(eq(teamRole.id, r.id)); return refresh(teamId); } // the Leader keeps every power
+    await db.update(teamRole).set({ name, perms }).where(eq(teamRole.id, r.id));
+    if (input.applyToMembers) await db.update(teamMember).set({ perms }).where(and(eq(teamMember.roleId, r.id), eq(teamMember.isAdmin, false)));
   } else {
+    const n = await db.select({ id: teamRole.id }).from(teamRole).where(eq(teamRole.teamId, teamId));
+    if (n.length >= 20) throw new Error("A team can have up to 20 roles.");
     await db.insert(teamRole).values({ teamId, name, perms, position: 99 });
   }
   refresh(teamId);
@@ -203,8 +216,8 @@ export async function deleteRole(roleId: string) {
   const [r] = await db.select().from(teamRole).where(eq(teamRole.id, roleId));
   if (!r) return;
   await requireAdmin(me.id, r.teamId);
-  if (r.name === "Leader") throw new Error("The Leader role belongs to the admin and can't be deleted.");
-  await db.delete(teamRole).where(eq(teamRole.id, roleId)); // members keep their current powers
+  if (r.isLeader) throw new Error("The Leader role belongs to the admin and can't be deleted.");
+  await db.delete(teamRole).where(eq(teamRole.id, roleId)); // its members become plain members but keep their current powers
   refresh(r.teamId);
 }
 

@@ -49,7 +49,7 @@ const CHAPTERS: Chapter[] = [
     try: { href: "/hive", label: "Open a team" } },
   { id: "hierarchy", part: "The Hive", title: "Hierarchy, roles and Hive control", pose: "celebrate",
     what: "The admin sits at the top of the team chart. The outline on the left shows who reports to whom: the further someone is indented, the further down the chain they are.",
-    steps: ["Open Hierarchy. Drag a name onto the right side of someone's row to put them under that person, or use the arrow buttons.", "Pick each person's role (Co-leader, Member, or your own roles from Team settings).", "As admin, click Hive control on anyone to choose exactly what they may do: edit nicknames, create tasks, manage members and more.", "Anyone can give themselves a nickname; editing other people's needs that power."],
+    steps: ["Open Hierarchy. Hold the ⠿ handle and drag a name onto someone's row to put them under that person.", "As the Leader, pick each person's role (Co-lead, Assistant, or your own). Only the Leader hands out roles.", "Team settings → Roles: tap a role to rename it, tick its powers, delete it, or add a new one.", "As admin, click Hive control on anyone to choose exactly what they may do: edit nicknames, create tasks, manage members and more.", "Anyone can give themselves a nickname; editing other people's needs that power."],
     try: { href: "/hive", label: "Open a team" } },
   { id: "buzz", part: "The Hive", title: "Assign a task (Buzz emails)", pose: "fly",
     what: "Team tasks are emailed to the people you assign, with the steps and a Mark done button. Reminders go out 3 days and 1 day before the due date.",

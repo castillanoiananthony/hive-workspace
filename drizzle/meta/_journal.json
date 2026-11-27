@@ -50,6 +50,13 @@
       "when": 1795793731288,
       "tag": "0006_hive_vault",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795795767999,
+      "tag": "0007_role_leader",
+      "breakpoints": true
     }
   ]
 }

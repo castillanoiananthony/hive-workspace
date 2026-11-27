@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean, customType, index, integer, jsonb, pgEnum, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -211,8 +212,12 @@ export const teamRole = pgTable("team_role", {
   name: text("name").notNull(),
   perms: jsonb("perms").$type<string[]>().notNull().default([]),
   position: integer("position").notNull().default(0),
+  isLeader: boolean("is_leader").notNull().default(false), // the admin's role: every power, can't be deleted
   createdAt: created(),
-});
+}, (t) => [
+  uniqueIndex("team_role_name_uq").on(t.teamId, t.name),
+  uniqueIndex("team_role_leader_uq").on(t.teamId).where(sql`${t.isLeader}`),
+]);
 
 // The Comb: a team's own feed. Posts by members; task activity is mixed in when the page is built.
 export const combPost = pgTable("comb_post", {

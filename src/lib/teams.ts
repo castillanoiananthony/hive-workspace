@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { team, teamMember, teamRole } from "@/db/schema";
-import { ALL_PERMS, can, DEFAULT_PERMS, type Perm } from "./hive-perms";
+import { ALL_PERMS, can, presetPerms, ROLE_PRESETS, type Perm } from "./hive-perms";
 import { newToken } from "./tokens";
 
 export { TEAM_COLORS_CLIENT as TEAM_COLORS } from "@/app/(app)/hive/colors";
@@ -46,20 +46,23 @@ export async function linkInvites(userId: string, email: string) {
     .where(and(isNull(teamMember.userId), sql`lower(${teamMember.email}) = ${email.toLowerCase()}`));
 }
 
-const DEFAULT_ROLES: { name: string; perms: Perm[] }[] = [
-  { name: "Leader", perms: ALL_PERMS },
-  { name: "Co-leader", perms: ["post", "nicknames", "tasks", "members", "hierarchy", "templates", "log"] },
-  { name: "Member", perms: [...DEFAULT_PERMS, "vault"] },
-];
+/** Role names from the New team dialog: first one is the Leader. Trims, drops blanks and repeats, caps at 12. */
+export function cleanRoleNames(names: string[] | undefined) {
+  const seen = new Set<string>(), out: string[] = [];
+  for (const n of names ?? []) { const v = String(n).trim().slice(0, 40); if (v && !seen.has(v.toLowerCase())) { seen.add(v.toLowerCase()); out.push(v); } }
+  if (!out.length) out.push("Leader");
+  return out.slice(0, 12);
+}
 
-/** A new team: the creator is its admin and Leader, with three starter roles. */
-export async function createTeamWithAdmin(owner: { id: string; name: string; email: string }, name: string, color: string) {
+/** A new team: the creator is its admin, holding the first (Leader) role. */
+export async function createTeamWithAdmin(owner: { id: string; name: string; email: string }, name: string, color: string, roleNames: string[] = [...ROLE_PRESETS[0].roles]) {
+  const names = cleanRoleNames(roleNames);
   return db.transaction(async (tx) => {
     const [t] = await tx.insert(team).values({ ownerId: owner.id, name, color }).returning({ id: team.id });
-    const roles = await tx.insert(teamRole).values(DEFAULT_ROLES.map((r, i) => ({ teamId: t.id, name: r.name, perms: r.perms, position: i }))).returning({ id: teamRole.id, name: teamRole.name });
+    const roles = await tx.insert(teamRole).values(names.map((n, i) => ({ teamId: t.id, name: n, perms: presetPerms(i), position: i, isLeader: i === 0 }))).returning({ id: teamRole.id, isLeader: teamRole.isLeader });
     await tx.insert(teamMember).values({
       teamId: t.id, name: owner.name || owner.email.split("@")[0], email: owner.email.toLowerCase(), unsubscribeTokenHash: newToken().hash,
-      userId: owner.id, joinedAt: new Date(), isAdmin: true, perms: ALL_PERMS, roleId: roles.find((r) => r.name === "Leader")!.id,
+      userId: owner.id, joinedAt: new Date(), isAdmin: true, perms: ALL_PERMS, roleId: roles.find((r) => r.isLeader)!.id,
     });
     return t.id;
   });
@@ -69,10 +72,10 @@ export async function createTeamWithAdmin(owner: { id: string; name: string; ema
 export async function ensureRoles(teamId: string) {
   const [has] = await db.select({ id: teamRole.id }).from(teamRole).where(eq(teamRole.teamId, teamId)).limit(1);
   if (has) return;
-  const roles = await db.insert(teamRole).values(DEFAULT_ROLES.map((r, i) => ({ teamId, name: r.name, perms: r.perms, position: i }))).returning({ id: teamRole.id, name: teamRole.name });
-  const leader = roles.find((r) => r.name === "Leader")!.id, member = roles.find((r) => r.name === "Member")!.id;
-  await db.update(teamMember).set({ roleId: leader, perms: ALL_PERMS }).where(and(eq(teamMember.teamId, teamId), eq(teamMember.isAdmin, true)));
-  await db.update(teamMember).set({ roleId: member, perms: DEFAULT_PERMS }).where(and(eq(teamMember.teamId, teamId), eq(teamMember.isAdmin, false), isNull(teamMember.roleId)));
+  // two page loads at once both get here: the unique indexes make the second insert a no-op instead of duplicates
+  await db.insert(teamRole).values(ROLE_PRESETS[0].roles.map((n, i) => ({ teamId, name: n, perms: presetPerms(i), position: i, isLeader: i === 0 }))).onConflictDoNothing();
+  const [leader] = await db.select({ id: teamRole.id }).from(teamRole).where(and(eq(teamRole.teamId, teamId), eq(teamRole.isLeader, true)));
+  if (leader) await db.update(teamMember).set({ roleId: leader.id, perms: ALL_PERMS }).where(and(eq(teamMember.teamId, teamId), eq(teamMember.isAdmin, true)));
 }
 
 export const displayName = (m: { nickname: string | null; name: string }) => m.nickname?.trim() || m.name;

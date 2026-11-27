@@ -35,7 +35,7 @@ export function Comb({ team, members, tasks, stream, me }: { team: TeamT; member
           e.preventDefault();
           start(async () => { try { await postToComb(team.id, body); setBody(""); setErr(null); router.refresh(); } catch (x) { setErr(x instanceof Error ? x.message : "Couldn't post."); } });
         }}>
-          {mine && <MemberAvatar m={mine} color={team.color} size={44} />}
+          {mine && <span className="hidden sm:block"><MemberAvatar m={mine} color={team.color} size={44} /></span>}
           <div className="grid min-w-0 flex-1 gap-2">
             <label htmlFor="comb-post" className="sr-only">Post an update to {team.name}</label>
             <textarea id="comb-post" value={body} onChange={(e) => setBody(e.target.value)} rows={3} maxLength={2000} placeholder={`Share an update with ${team.name}…`}
@@ -55,22 +55,26 @@ export function Comb({ team, members, tasks, stream, me }: { team: TeamT; member
           <p className="mt-1 text-muted">Post the first update. New tasks and finished work show up here too.</p>
         </div>
       ) : (
-        <ol className="mt-6 grid gap-3">
+        <ol className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3">
           {stream.map((s) => {
             const who = member(s.memberId);
             return (
               <li key={s.id}>
-                <article className="flex gap-3 rounded-[var(--radius)] border border-line bg-surface p-4">
-                  {s.kind === "task" ? <HexBadge label={team.name} color={team.color} size={40} /> : who ? <MemberAvatar m={who} color={team.color} size={40} /> : <HexBadge label="?" color={team.color} size={40} />}
-                  <div className="min-w-0 flex-1">
-                    {s.kind === "post" && (<><p className="font-semibold">{who ? nameOf(who) : "Former member"}</p><p className="mt-1 whitespace-pre-line">{s.body}</p></>)}
-                    {s.kind === "done" && <p><span className="font-semibold">{who ? nameOf(who) : "Someone"}</span> marked <Link href={`/tasks/${s.taskId}`} className="font-semibold hover:underline">“{taskTitle(s.taskId)}”</Link> done <span className="text-success">✓</span></p>}
-                    {s.kind === "task" && <p>New task: <Link href={`/tasks/${s.taskId}`} className="font-semibold hover:underline">“{taskTitle(s.taskId)}”</Link></p>}
-                    <p className="mt-1 text-sm text-muted">{ago(s.at, now)}</p>
+                <article className="rounded-[var(--radius)] border border-line bg-surface p-4">
+                  <div className="flex items-center gap-3">
+                    {s.kind === "task" ? <HexBadge label={team.name} color={team.color} size={40} /> : who ? <MemberAvatar m={who} color={team.color} size={40} /> : <HexBadge label="?" color={team.color} size={40} />}
+                    <div className="min-w-0 flex-1">
+                      {s.kind === "post" && <p className="truncate font-semibold">{who ? nameOf(who) : "Former member"}</p>}
+                      {s.kind === "done" && <p><span className="font-semibold">{who ? nameOf(who) : "Someone"}</span> marked <Link href={`/tasks/${s.taskId}`} className="font-semibold hover:underline">“{taskTitle(s.taskId)}”</Link> done <span className="text-success">✓</span></p>}
+                      {s.kind === "task" && <p>New task: <Link href={`/tasks/${s.taskId}`} className="font-semibold hover:underline">“{taskTitle(s.taskId)}”</Link></p>}
+                      <p className="text-sm text-muted">{ago(s.at, now)}</p>
+                    </div>
+                    {s.kind === "post" && (s.memberId === me.memberId || me.isAdmin) && (
+                      <button type="button" disabled={pending} onClick={() => { if (confirm("Delete this post?")) start(async () => { await deleteCombPost(s.id); router.refresh(); }); }} className="min-h-11 shrink-0 px-2 text-sm text-muted hover:text-danger">Delete</button>
+                    )}
                   </div>
-                  {s.kind === "post" && (s.memberId === me.memberId || me.isAdmin) && (
-                    <button type="button" disabled={pending} onClick={() => { if (confirm("Delete this post?")) start(async () => { await deleteCombPost(s.id); router.refresh(); }); }} className="min-h-11 self-start px-2 text-sm text-muted hover:text-danger">Delete</button>
-                  )}
+                  {/* the post gets the card's full width, not a column squeezed beside the picture */}
+                  {s.kind === "post" && <p className="mt-3 max-w-[70ch] whitespace-pre-line break-words">{s.body}</p>}
                 </article>
               </li>
             );

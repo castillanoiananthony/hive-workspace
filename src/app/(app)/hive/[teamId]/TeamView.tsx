@@ -68,7 +68,7 @@ export function TeamView(props: Props) {
         {tab === "members" && <Members team={team} members={members} roles={props.roles} me={me} />}
         {tab === "templates" && <Templates team={team} members={members} templates={props.templates} />}
         {tab === "log" && <EmailLog log={props.log} tz={props.tz} />}
-        {tab === "settings" && <Settings team={team} me={me} roles={props.roles} />}
+        {tab === "settings" && <Settings team={team} me={me} roles={props.roles} members={members} />}
       </div>
     </>
   );
@@ -286,7 +286,7 @@ function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
 
 // ---------- settings ----------
 
-function Settings({ team, me, roles }: { team: Team; me: MeT; roles: RoleT[] }) {
+function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: RoleT[]; members: Member[] }) {
   const router = useRouter();
   const [color, setColor] = useState(team.color);
   const [msg, setMsg] = useState<string | null>(null);
@@ -318,7 +318,7 @@ function Settings({ team, me, roles }: { team: Team; me: MeT; roles: RoleT[] }) 
         <div className="flex items-center gap-3"><button disabled={pending} className={btnPrimary}>Save changes</button><p role="status" className="text-sm text-muted">{msg}</p></div>
       </form>}
 
-      {me.isAdmin && <Roles team={team} roles={roles} />}
+      {me.isAdmin && <Roles team={team} roles={roles} members={members} />}
 
       {me.isAdmin && <section aria-labelledby="danger-h" className="grid gap-3 rounded-[var(--radius)] border border-danger/50 p-5">
         <h2 id="danger-h" className="font-semibold text-danger">Delete this team</h2>

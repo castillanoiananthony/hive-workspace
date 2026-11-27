@@ -64,7 +64,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
         avatar: avatarOf(m.userId), unsubscribed: Boolean(m.unsubscribedAt),
       }))}
       links={links.map((l) => ({ id: l.id, title: l.title, url: l.url, note: l.note, memberId: l.memberId, at: l.createdAt.toISOString() }))}
-      roles={roles.map((r) => ({ id: r.id, name: r.name, perms: r.perms }))}
+      roles={roles.map((r) => ({ id: r.id, name: r.name, perms: r.perms, isLeader: r.isLeader }))}
       tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime }))}
       assigned={assigned.map((a) => ({ ...a, doneAt: a.doneAt?.toISOString() ?? null }))}
       stream={[

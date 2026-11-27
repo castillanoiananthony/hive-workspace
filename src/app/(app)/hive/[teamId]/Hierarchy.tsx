@@ -176,7 +176,7 @@ function MemberControls({ m, me, roles, onControl }: { m: MemberT; me: MeT; role
   const [nick, setNick] = useState(false);
   const [pending, start] = useTransition();
   const canNick = has(me, "nicknames") || m.id === me.memberId;
-  const canRole = has(me, "hierarchy") && !m.isAdmin;
+  const canRole = me.isAdmin && !m.isAdmin; // only the Leader hands out roles
   if (!canNick && !canRole && !(me.isAdmin && !m.isAdmin)) return null;
   return (
     <div className="mb-1 ml-14 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -184,8 +184,8 @@ function MemberControls({ m, me, roles, onControl }: { m: MemberT; me: MeT; role
         <label className="flex items-center gap-1"><span className="sr-only">Role for {nameOf(m)}</span>
           <select value={m.roleId ?? ""} disabled={pending} onChange={(e) => start(async () => { await setMemberRole(m.id, e.target.value); router.refresh(); })}
             className="min-h-9 rounded-[var(--radius)] border border-line bg-bg px-2 text-sm">
-            {!m.roleId && <option value="">No role</option>}
-            {roles.filter((r) => r.name !== "Leader").map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            <option value="">Member (no role)</option>
+            {roles.filter((r) => !r.isLeader).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </label>
       )}

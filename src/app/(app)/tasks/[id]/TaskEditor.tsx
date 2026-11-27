@@ -213,7 +213,7 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
 
       {team && howTo && (
         <section aria-labelledby="howto-h" className="mb-8">
-          <div className="flex items-baseline justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <h2 id="howto-h" className="font-display text-lg font-semibold">How to do it</h2>
             <Toolbar editor={howTo} />
           </div>
@@ -223,7 +223,7 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
       )}
 
       <section aria-labelledby="notes-h">
-        <div className="flex items-baseline justify-between">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h2 id="notes-h" className="font-display text-lg font-semibold">{team ? "Private notes" : "Notes"}</h2>
           {editor && <Toolbar editor={editor} />}
         </div>
@@ -308,7 +308,7 @@ function Toolbar({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>>
     editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
   }
   return (
-    <div role="toolbar" aria-label="Formatting" className="flex flex-wrap">
+    <div role="toolbar" aria-label="Formatting" className="-ml-3 flex flex-nowrap sm:ml-0">
       {btn("H", "Heading", editor.isActive("heading", { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
       {btn("B", "Bold", editor.isActive("bold"), () => editor.chain().focus().toggleBold().run())}
       {btn("I", "Italic", editor.isActive("italic"), () => editor.chain().focus().toggleItalic().run())}
