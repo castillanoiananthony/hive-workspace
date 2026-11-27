@@ -97,6 +97,7 @@ export const team = pgTable("team", {
   color: text("color").notNull(),
   digestEnabled: boolean("digest_enabled").notNull().default(false),
   digestDay: smallint("digest_day").notNull().default(1), // 0 = Sunday
+  joinCode: text("join_code").unique(), // shareable join link; null = switched off
   createdAt: created(),
   updatedAt: updated(),
 });
@@ -141,6 +142,15 @@ export const teamMember = pgTable("team_member", {
   email: text("email").notNull(), // stored lowercase
   unsubscribeTokenHash: text("unsubscribe_token_hash").notNull().unique(),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+  // accounts: invited by email (userId null) until they sign up with that address or use the join link
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  joinedAt: timestamp("joined_at", { withTimezone: true }),
+  nickname: text("nickname"),
+  roleId: text("role_id").references((): AnyPgColumn => teamRole.id, { onDelete: "set null" }),
+  perms: jsonb("perms").$type<string[]>().notNull().default([]), // "Hive control" for this person; starts as their role's set
+  isAdmin: boolean("is_admin").notNull().default(false), // the leader: top of the hierarchy, every power
+  parentId: text("parent_id").references((): AnyPgColumn => teamMember.id, { onDelete: "set null" }), // who they sit under
+  position: integer("position").notNull().default(0), // order among people under the same person
   createdAt: created(),
 }, (t) => [uniqueIndex("member_team_email_uq").on(t.teamId, t.email)]);
 
@@ -175,7 +185,7 @@ export const template = pgTable("template", {
   updatedAt: updated(),
 });
 
-export const emailKind = pgEnum("email_kind", ["assign", "remind3", "remind1", "digest"]);
+export const emailKind = pgEnum("email_kind", ["assign", "remind3", "remind1", "digest", "invite"]);
 export const emailStatus = pgEnum("email_status", ["queued", "sent", "failed"]);
 
 export const emailLog = pgTable("email_log", {
@@ -194,3 +204,21 @@ export const emailLog = pgTable("email_log", {
   sentAt: timestamp("sent_at", { withTimezone: true }),
 }, (t) => [index("email_log_team_idx").on(t.teamId, t.createdAt)]);
 
+
+export const teamRole = pgTable("team_role", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  perms: jsonb("perms").$type<string[]>().notNull().default([]),
+  position: integer("position").notNull().default(0),
+  createdAt: created(),
+});
+
+// The Comb: a team's own feed. Posts by members; task activity is mixed in when the page is built.
+export const combPost = pgTable("comb_post", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  memberId: text("member_id").references(() => teamMember.id, { onDelete: "set null" }),
+  body: text("body").notNull(),
+  createdAt: created(),
+}, (t) => [index("comb_team_idx").on(t.teamId, t.createdAt)]);

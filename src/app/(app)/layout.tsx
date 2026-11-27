@@ -11,14 +11,15 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <a href="#content" className="sr-only z-50 rounded-[var(--radius)] bg-accent px-4 py-3 font-semibold text-on-accent focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Skip to content</a>
       <Suspense fallback={<SidebarView path="" me={null} />}><SidebarWithMe /></Suspense>
       <div id="content" tabIndex={-1} className="min-w-0 flex-1 pb-24 outline-none md:pb-0">{children}</div>
-      <Suspense fallback={<BottomNavView path="" />}><BottomNav /></Suspense>
+      <Suspense fallback={<BottomNavView path="" />}><BottomNavWithMe /></Suspense>
       <Suspense fallback={null}><NavTracker /></Suspense>
     </div>
   );
 }
 
-async function SidebarWithMe() {
+async function currentMe() {
   const session = await getSession();
-  const me = session ? { name: session.user.name, email: session.user.email, avatar: (await profileImages(session.user.id)).avatar } : null;
-  return <Sidebar me={me} />;
+  return session ? { name: session.user.name, email: session.user.email, avatar: (await profileImages(session.user.id)).avatar } : null;
 }
+async function SidebarWithMe() { return <Sidebar me={await currentMe()} />; }
+async function BottomNavWithMe() { return <BottomNav me={await currentMe()} />; }

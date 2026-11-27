@@ -3,9 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { goal, task, team, user } from "@/db/schema";
+import { goal, task, user } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireUser } from "@/lib/session";
+import { createTeamWithAdmin } from "@/lib/teams";
 import { PRESETS, TEXT_SIZES, type Mode, type PresetId, type TextSize, type ThemeSettings } from "@/lib/themes";
 import { headers } from "next/headers";
 
@@ -32,7 +33,7 @@ export async function createFirstTeam(name: string) {
   const me = await requireUser();
   const n = clean(name, 80);
   if (!n) throw new Error("Give your team a name.");
-  await db.insert(team).values({ ownerId: me.id, name: n, color: "#F5B80B" });
+  await createTeamWithAdmin(me, n, "#F5B80B");
 }
 
 export async function finishOnboarding() {

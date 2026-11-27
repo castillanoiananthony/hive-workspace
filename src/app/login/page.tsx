@@ -19,7 +19,7 @@ export default function LoginPage() {
           <LoginForm google={googleEnabled} />
         </div>
         <p className="mt-6 text-center text-sm text-muted">
-          Your teammates never need an account. <a className="text-accent-text underline underline-offset-4" href="/developer">Who made this?</a>
+          Joining a team? Use the email address your invite was sent to. <a className="text-accent-text underline underline-offset-4" href="/developer">Who made this?</a>
         </p>
         <p className="mt-3 text-center text-sm text-muted">
           <a className="underline underline-offset-4" href="/privacy">Privacy</a>

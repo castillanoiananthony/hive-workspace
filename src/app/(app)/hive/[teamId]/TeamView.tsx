@@ -4,28 +4,42 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
 import { HexBadge } from "@/components/app/HexBadge";
+import { HexCheck } from "@/components/app/HexCheck";
 import { formatDue } from "@/lib/dates";
-import { addMembers, deleteTeam, deleteTemplate, newTeamTask, removeMember, renameMember, updateTeam, updateTemplate } from "../actions";
+import { deleteTeam, deleteTemplate, markMyPart, newTeamTask, updateTeam, updateTemplate } from "../actions";
 import { ColorPicker } from "../NewTeam";
+import { Comb } from "./Comb";
+import { Hierarchy } from "./Hierarchy";
+import { MemberAvatar } from "./MemberAvatar";
+import { Members } from "./Members";
+import { Roles } from "./Roles";
+import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT } from "./types";
 
-type Team = { id: string; name: string; color: string; digestEnabled: boolean; digestDay: number };
-type Member = { id: string; name: string; email: string; unsubscribed: boolean };
-type Task = { id: string; title: string; status: "todo" | "doing" | "done"; dueAt: string | null; hasTime: boolean };
-type Assigned = { taskId: string; memberId: string; doneAt: string | null };
+type Team = TeamT;
+type Member = MemberT;
+type Task = TaskT;
+type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
+type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; tz: string };
 
-const TABS = [["board", "Tasks"], ["roster", "Roster"], ["templates", "Templates"], ["log", "Email log"], ["settings", "Team settings"]] as const;
-type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
+// tabs a member can see; some only appear with the matching power
+const TABS: { id: string; label: string; need?: string }[] = [
+  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
+  { id: "templates", label: "Templates", need: "templates" }, { id: "log", label: "Email log", need: "log" }, { id: "settings", label: "Team settings", need: "settings" },
+];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const btnPrimary = "min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60";
 const btn = "min-h-11 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-accent-edge disabled:opacity-60";
 const field = "min-h-11 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge";
 
-export function TeamView(props: { team: Team; members: Member[]; tasks: Task[]; assigned: Assigned[]; templates: Template[]; log: LogRow[]; tz: string }) {
-  const { team, members, tasks } = props;
-  const [tab, setTab] = useState<(typeof TABS)[number][0]>(members.length ? "board" : "roster");
+export function TeamView(props: Props) {
+  const { team, members, tasks, me } = props;
+  const tabs = TABS.filter((t) => !t.need || has(me, t.need) || (t.id === "settings" && me.isAdmin));
+  const [tab, setTab] = useState("comb");
   const [pending, start] = useTransition();
   const open = tasks.filter((t) => t.status !== "done").length;
+  const joined = members.filter((m) => m.joined).length;
   return (
     <>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
@@ -33,24 +47,26 @@ export function TeamView(props: { team: Team; members: Member[]; tasks: Task[]; 
           <HexBadge label={team.name} color={team.color} size={56} />
           <div>
             <h1 className="font-display text-3xl font-semibold">{team.name}</h1>
-            <p className="text-muted">{members.length} {members.length === 1 ? "member" : "members"}, {open} open {open === 1 ? "task" : "tasks"}</p>
+            <p className="text-muted">{joined} {joined === 1 ? "member" : "members"}{members.length > joined ? `, ${members.length - joined} invited` : ""}, {open} open {open === 1 ? "task" : "tasks"}</p>
           </div>
         </div>
-        <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button>
+        {has(me, "tasks") && <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button>}
       </div>
 
       <div role="tablist" aria-label="Team sections" className="mt-8 flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map(([id, label]) => (
-          <button key={id} type="button" role="tab" id={`tab-${id}`} aria-selected={tab === id} aria-controls={`panel-${id}`} onClick={() => setTab(id)}
-            className="min-h-11 shrink-0 border-b-2 border-transparent px-4 font-medium text-muted aria-selected:border-accent-edge aria-selected:text-ink">{label}</button>
+        {tabs.map((t) => (
+          <button key={t.id} type="button" role="tab" id={`tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`panel-${t.id}`} onClick={() => setTab(t.id)}
+            className="min-h-11 shrink-0 border-b-2 border-transparent px-4 font-medium text-muted aria-selected:border-accent-edge aria-selected:text-ink">{t.label}</button>
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-6">
-        {tab === "board" && <Board {...props} onRoster={() => setTab("roster")} />}
-        {tab === "roster" && <Roster team={team} members={members} />}
+        {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
+        {tab === "board" && <Board {...props} onRoster={() => setTab("members")} />}
+        {tab === "hierarchy" && <Hierarchy team={team} members={members} roles={props.roles} me={me} />}
+        {tab === "members" && <Members team={team} members={members} roles={props.roles} me={me} />}
         {tab === "templates" && <Templates team={team} members={members} templates={props.templates} />}
         {tab === "log" && <EmailLog log={props.log} tz={props.tz} />}
-        {tab === "settings" && <Settings team={team} />}
+        {tab === "settings" && <Settings team={team} me={me} roles={props.roles} />}
       </div>
     </>
   );
@@ -58,11 +74,13 @@ export function TeamView(props: { team: Team; members: Member[]; tasks: Task[]; 
 
 // ---------- status board: tasks × members ----------
 
-function Board({ team, members, tasks, assigned, tz, onRoster }: { team: Team; members: Member[]; tasks: Task[]; assigned: Assigned[]; tz: string; onRoster: () => void }) {
+function Board({ team, members, tasks, assigned, tz, me, onRoster }: Props & { onRoster: () => void }) {
   const [now] = useState(() => Date.now());
   const [pending, start] = useTransition();
-  if (members.length === 0) return <EmptyState pose="idle" title="Add your teammates first" body="Paste their email addresses and you can start assigning tasks." action={<button type="button" onClick={onRoster} className={btnPrimary}>Add members</button>} />;
-  if (tasks.length === 0) return <EmptyState title="No team tasks yet" body="Make a task, pick who does it and add the steps under “How to do it”. Phase 5 emails it to them." action={<button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button>} />;
+  const others = members.filter((m) => !m.isAdmin);
+  if (others.length === 0 && has(me, "members")) return <EmptyState pose="idle" title="Invite your teammates first" body="Add their emails or share the join link, then you can start assigning tasks." action={<button type="button" onClick={onRoster} className={btnPrimary}>Invite members</button>} />;
+  if (tasks.length === 0) return <EmptyState title="No team tasks yet" body={has(me, "tasks") ? "Make a task, pick who does it and add the steps under “How to do it”. They get it by email." : "When a task is assigned to you it shows up here."} action={has(me, "tasks") ? <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button> : undefined} />;
+  const mine = tasks.filter((t) => assigned.some((a) => a.taskId === t.id && a.memberId === me.memberId));
 
   const state = (t: Task, m: Member): "done" | "overdue" | "pending" | null => {
     const a = assigned.find((x) => x.taskId === t.id && x.memberId === m.id);
@@ -83,6 +101,7 @@ function Board({ team, members, tasks, assigned, tz, onRoster }: { team: Team; m
 
   return (
     <>
+      {mine.length > 0 && <MyTasks tasks={mine} assigned={assigned} me={me} tz={tz} />}
       {/* wide screens: grid of tasks × members */}
       <div className="hidden overflow-x-auto rounded-[var(--radius)] border border-line md:block">
         <table className="w-full border-collapse text-left">
@@ -92,7 +111,7 @@ function Board({ team, members, tasks, assigned, tz, onRoster }: { team: Team; m
               <th scope="col" className="min-w-56 p-3 font-semibold">Task</th>
               {members.map((m) => (
                 <th key={m.id} scope="col" className="min-w-32 p-3 align-bottom font-medium">
-                  <span className="flex items-center gap-2"><HexBadge label={m.name} color={team.color} size={28} />{m.name}</span>
+                  <span className="flex items-center gap-2"><MemberAvatar m={m} color={team.color} size={28} />{nameOf(m)}</span>
                   <span className="mt-1 block text-sm font-normal text-muted">{pct(m) === null ? "No tasks" : `${pct(m)}% done`}</span>
                 </th>
               ))}
@@ -123,7 +142,7 @@ function Board({ team, members, tasks, assigned, tz, onRoster }: { team: Team; m
             {t.dueAt && <p className="text-sm text-muted">Due {formatDue(new Date(t.dueAt), t.hasTime, tz)}</p>}
             <ul className="mt-3 grid gap-2">
               {members.filter((m) => state(t, m)).map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3"><span>{m.name}</span>{chip(state(t, m)!)}</li>
+                <li key={m.id} className="flex items-center justify-between gap-3"><span>{nameOf(m)}</span>{chip(state(t, m)!)}</li>
               ))}
               {!members.some((m) => state(t, m)) && <li className="text-sm text-muted">Nobody assigned yet.</li>}
             </ul>
@@ -131,88 +150,33 @@ function Board({ team, members, tasks, assigned, tz, onRoster }: { team: Team; m
         ))}
       </ul>
       <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-2 md:hidden">
-        {members.map((m) => <div key={m.id} className="text-sm"><dt className="inline">{m.name}: </dt><dd className="inline text-muted">{pct(m) === null ? "no tasks" : `${pct(m)}% done`}</dd></div>)}
+        {members.map((m) => <div key={m.id} className="text-sm"><dt className="inline">{nameOf(m)}: </dt><dd className="inline text-muted">{pct(m) === null ? "no tasks" : `${pct(m)}% done`}</dd></div>)}
       </dl>
     </>
   );
 }
 
-// ---------- roster ----------
-
-function Roster({ team, members }: { team: Team; members: Member[] }) {
+/** Your own part of team tasks: tick it here or with the email's Mark done link. */
+function MyTasks({ tasks, assigned, me, tz }: { tasks: Task[]; assigned: Assigned[]; me: MeT; tz: string }) {
   const router = useRouter();
-  const [input, setInput] = useState("");
-  const [report, setReport] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-
-  function add(e: React.FormEvent) {
-    e.preventDefault();
-    start(async () => {
-      try {
-        const r = await addMembers(team.id, input);
-        const parts = [
-          r.added.length ? `Added ${r.added.length} ${r.added.length === 1 ? "member" : "members"}.` : "Nobody new to add.",
-          r.duplicates.length ? `Skipped ${r.duplicates.length} already on the team.` : "",
-          r.invalid.length ? `These don't look like email addresses: ${r.invalid.join(", ")}.` : "",
-          r.overLimit ? `${r.overLimit} left out: a team can have up to 200 members.` : "",
-        ];
-        setReport(parts.filter(Boolean).join(" "));
-        setInput(r.invalid.join("\n")); // keep only what needs fixing
-        router.refresh();
-      } catch (err) {
-        setReport(err instanceof Error ? err.message : "Couldn't add members.");
-      }
-    });
-  }
-
-  return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
-      <section aria-labelledby="members-h">
-        <h2 id="members-h" className="font-display text-xl font-semibold">Members</h2>
-        {members.length === 0 ? (
-          <p className="mt-3 text-muted">No members yet. Add their emails on the right; they don&apos;t need an account.</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-line rounded-[var(--radius)] border border-line bg-surface">
-            {members.map((m) => <MemberRow key={m.id} member={m} color={team.color} />)}
-          </ul>
-        )}
-      </section>
-      <form onSubmit={add} className="grid content-start gap-3 rounded-[var(--radius)] border border-line bg-surface p-5">
-        <h2 className="font-display text-lg font-semibold">Add members</h2>
-        <label htmlFor="emails" className="text-sm text-muted">One email or many. Separate them with commas or new lines. “Ana Cruz &lt;ana@school.edu&gt;” keeps the name.</label>
-        <textarea id="emails" value={input} onChange={(e) => setInput(e.target.value)} rows={6} placeholder={"ana@school.edu, ben@school.edu\nCarla Reyes <carla@school.edu>"} className={`${field} py-2`} />
-        <button disabled={pending || !input.trim()} className={btnPrimary}>{pending ? "Adding…" : "Add to team"}</button>
-        <p role="status" className="text-sm text-muted">{report}</p>
-      </form>
-    </div>
-  );
-}
-
-function MemberRow({ member: m, color }: { member: Member; color: string }) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
   const [pending, start] = useTransition();
   return (
-    <li className="flex flex-wrap items-center gap-3 p-3">
-      <HexBadge label={m.name} color={color} size={36} />
-      <div className="min-w-0 flex-1">
-        {editing ? (
-          <form onSubmit={(e) => { e.preventDefault(); const n = String(new FormData(e.currentTarget).get("n")); start(async () => { await renameMember(m.id, n); setEditing(false); router.refresh(); }); }} className="flex gap-2">
-            <label className="sr-only" htmlFor={`n-${m.id}`}>Name</label>
-            <input id={`n-${m.id}`} name="n" defaultValue={m.name} autoFocus maxLength={80} className={`${field} min-w-0 flex-1`} />
-            <button disabled={pending} className={btn}>Save</button>
-          </form>
-        ) : (
-          <>
-            <p className="font-medium">{m.name}</p>
-            <p className="truncate text-sm text-muted">{m.email}{m.unsubscribed ? ". Turned off Buzz emails" : ""}</p>
-          </>
-        )}
-      </div>
-      {!editing && <button type="button" onClick={() => setEditing(true)} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Rename</button>}
-      <button type="button" disabled={pending} onClick={() => { if (confirm(`Remove ${m.name} from the team? Their task assignments are removed too.`)) start(async () => { await removeMember(m.id); router.refresh(); }); }}
-        className="min-h-11 px-2 text-sm text-muted hover:text-danger">Remove</button>
-    </li>
+    <section aria-labelledby="mine-h" className="mb-6 rounded-[var(--radius)] border border-line bg-surface p-4">
+      <h2 id="mine-h" className="font-display font-semibold">Your tasks in this team</h2>
+      <ul className="mt-2 grid gap-1">
+        {tasks.map((t) => {
+          const done = Boolean(assigned.find((a) => a.taskId === t.id && a.memberId === me.memberId)?.doneAt);
+          return (
+            <li key={t.id} className="flex items-center gap-1">
+              <HexCheck checked={done} label={`Mark my part of “${t.title}” done`} onChange={(v) => start(async () => { await markMyPart(t.id, v); router.refresh(); })} />
+              <Link href={`/tasks/${t.id}`} className={`min-h-11 flex-1 py-2 hover:underline ${done ? "text-muted line-through" : ""}`}>{t.title || "Untitled task"}</Link>
+              {t.dueAt && <span className="text-sm whitespace-nowrap text-muted">{formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}
+              {pending && <span className="sr-only">Saving…</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -277,7 +241,7 @@ function Recurrence({ template: t, members }: { template: Template; members: Mem
         <label className="flex min-h-11 items-center gap-2"><input type="radio" name="who" value="all" checked={who === "all"} onChange={() => setWho("all")} className="accent-[var(--accent)]" /> Whole team</label>
         <label className="flex min-h-11 items-center gap-2"><input type="radio" name="who" value="some" checked={who === "some"} onChange={() => setWho("some")} className="accent-[var(--accent)]" /> Only…</label>
         {who === "some" && members.map((m) => (
-          <label key={m.id} className="flex min-h-11 items-center gap-2"><input type="checkbox" name="member" value={m.id} defaultChecked={t.memberIds.includes(m.id)} className="size-4 accent-[var(--accent)]" />{m.name}</label>
+          <label key={m.id} className="flex min-h-11 items-center gap-2"><input type="checkbox" name="member" value={m.id} defaultChecked={t.memberIds.includes(m.id)} className="size-4 accent-[var(--accent)]" />{nameOf(m)}</label>
         ))}
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
@@ -290,7 +254,7 @@ function Recurrence({ template: t, members }: { template: Template; members: Mem
 
 // ---------- email log ----------
 
-const KIND = { assign: "New task", remind3: "Reminder", remind1: "Last reminder", digest: "Weekly digest" } as const;
+const KIND = { assign: "New task", remind3: "Reminder", remind1: "Last reminder", digest: "Weekly digest", invite: "Invite" } as const;
 
 function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
   if (log.length === 0) return <EmptyState pose="fly" title="No emails yet" body="Every Buzz email this team sends shows up here: who got it, what it was, when, and whether it went through." />;
@@ -320,7 +284,7 @@ function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
 
 // ---------- settings ----------
 
-function Settings({ team }: { team: Team }) {
+function Settings({ team, me, roles }: { team: Team; me: MeT; roles: RoleT[] }) {
   const router = useRouter();
   const [color, setColor] = useState(team.color);
   const [msg, setMsg] = useState<string | null>(null);
@@ -328,7 +292,7 @@ function Settings({ team }: { team: Team }) {
   const [pending, start] = useTransition();
   return (
     <div className="grid max-w-2xl gap-10">
-      <form className="grid gap-4" onSubmit={(e) => {
+      {has(me, "settings") && <form className="grid gap-4" onSubmit={(e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
         start(async () => {
@@ -350,16 +314,18 @@ function Settings({ team }: { team: Team }) {
           <p className="text-sm text-muted">It lists open tasks, what&apos;s due this week and what&apos;s overdue. Emails start once Buzz is set up (Phase 5).</p>
         </fieldset>
         <div className="flex items-center gap-3"><button disabled={pending} className={btnPrimary}>Save changes</button><p role="status" className="text-sm text-muted">{msg}</p></div>
-      </form>
+      </form>}
 
-      <section aria-labelledby="danger-h" className="grid gap-3 rounded-[var(--radius)] border border-danger/50 p-5">
+      {me.isAdmin && <Roles team={team} roles={roles} />}
+
+      {me.isAdmin && <section aria-labelledby="danger-h" className="grid gap-3 rounded-[var(--radius)] border border-danger/50 p-5">
         <h2 id="danger-h" className="font-semibold text-danger">Delete this team</h2>
         <p className="text-sm text-muted">This deletes the team&apos;s tasks, roster and templates. It can&apos;t be undone. Type <strong className="text-ink">{team.name}</strong> to confirm.</p>
         <label className="sr-only" htmlFor="confirm-name">Team name</label>
         <input id="confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} className={field} autoComplete="off" />
         <button type="button" disabled={pending || confirmName.trim() !== team.name} onClick={() => start(() => deleteTeam(team.id, confirmName))}
           className="min-h-11 justify-self-start rounded-[var(--radius)] border border-danger px-4 font-medium text-danger disabled:opacity-50">Delete team for good</button>
-      </section>
+      </section>}
     </div>
   );
 }

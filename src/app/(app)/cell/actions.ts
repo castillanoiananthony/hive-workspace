@@ -3,8 +3,9 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, task, taskLink, team, teamMember } from "@/db/schema";
+import { assignment, checklistItem, goal, task, taskLink, teamMember } from "@/db/schema";
 import { newToken } from "@/lib/tokens";
+import { requirePerm } from "@/lib/teams";
 import { periodFor, zonedToUtc } from "@/lib/dates";
 import { wouldCycle } from "@/lib/progress";
 import { parseQuickAdd } from "@/lib/quickadd";
@@ -23,9 +24,11 @@ async function ownGoal(userId: string, id: string | null | undefined) {
 
 /** A personal task you own, or a task in a team you own. */
 async function ownTask(userId: string, id: string) {
-  const [hit] = await db.select({ t: task, teamOwner: team.ownerId }).from(task).leftJoin(team, eq(task.teamId, team.id)).where(eq(task.id, id));
-  if (!hit || (hit.t.teamId ? hit.teamOwner !== userId : hit.t.ownerId !== userId)) throw new Error("That task no longer exists.");
-  return hit.t;
+  const [t] = await db.select().from(task).where(eq(task.id, id));
+  if (!t) throw new Error("That task no longer exists.");
+  if (t.teamId) await requirePerm(userId, t.teamId, "tasks"); // team tasks: anyone with the "Create & assign tasks" power
+  else if (t.ownerId !== userId) throw new Error("That task no longer exists.");
+  return t;
 }
 
 const touchGoal = (id: string | null) => (id ? db.update(goal).set({ lastActivityAt: new Date() }).where(eq(goal.id, id)) : null);
@@ -200,7 +203,7 @@ export async function restoreTask(snapshot: Awaited<ReturnType<typeof deleteTask
   // the snapshot comes back from the browser, so only trusted fields are re-inserted and ownership is forced
   const t = snapshot.task;
   // a team task can only come back into a team the user still owns
-  const teamRow = t.teamId ? (await db.select({ id: team.id }).from(team).where(and(eq(team.id, String(t.teamId)), eq(team.ownerId, me.id))))[0] : null;
+  const teamRow = t.teamId ? await requirePerm(me.id, String(t.teamId), "tasks").then((a) => ({ id: a.team.id })).catch(() => null) : null;
   if (t.teamId && !teamRow) throw new Error("That team no longer exists.");
   const parent = !teamRow && t.goalId ? await ownGoal(me.id, t.goalId).catch(() => null) : null;
   const status = ["todo", "doing", "done"].includes(t.status) ? t.status : "todo";

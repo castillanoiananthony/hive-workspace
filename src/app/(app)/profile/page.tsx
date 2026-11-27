@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { db } from "@/db";
 import { goal, task, team } from "@/db/schema";
 import { profileImages } from "@/lib/profile";
+import { inMyTeams } from "@/lib/team-sql";
 import { requireUser } from "@/lib/session";
 import { ProfileView } from "./ProfileView";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
@@ -28,7 +29,7 @@ async function Profile() {
     profileImages(me.id),
     db.select({ n: count() }).from(goal).where(and(eq(goal.ownerId, me.id), isNull(goal.archivedAt))),
     db.select({ n: count() }).from(task).where(and(eq(task.ownerId, me.id), eq(task.status, "done"))),
-    db.select({ n: count() }).from(team).where(eq(team.ownerId, me.id)),
+    db.select({ n: count() }).from(team).where(inMyTeams(me.id)),
   ]);
   return (
     <ProfileView

@@ -6,14 +6,17 @@ import { db } from "@/db";
 import { goal, task, team, user } from "@/db/schema";
 import { zonedToUtc } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
+import { requirePerm } from "@/lib/teams";
 
 /** Move a task to a new day (and time, if it has one). Works for personal tasks and tasks in teams you own. */
 export async function rescheduleTask(id: string, date: string, time: string | null) {
   const me = await requireUser();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || (time !== null && !/^\d{2}:\d{2}$/.test(time))) throw new Error("That date doesn't look right.");
-  const [row] = await db.select({ id: task.id, ownerId: task.ownerId, goalId: task.goalId, teamOwner: team.ownerId })
+  const [row] = await db.select({ id: task.id, ownerId: task.ownerId, goalId: task.goalId, teamId: task.teamId })
     .from(task).leftJoin(team, eq(task.teamId, team.id)).where(eq(task.id, id));
-  if (!row || (row.teamOwner ? row.teamOwner !== me.id : row.ownerId !== me.id)) throw new Error("That task no longer exists.");
+  if (!row) throw new Error("That task no longer exists.");
+  if (row.teamId) await requirePerm(me.id, row.teamId, "tasks");
+  else if (row.ownerId !== me.id) throw new Error("That task no longer exists.");
   await db.update(task).set({ dueAt: zonedToUtc(date, time, me.timezone), hasTime: time !== null }).where(eq(task.id, id));
   if (row.goalId) await db.update(goal).set({ lastActivityAt: new Date() }).where(and(eq(goal.id, row.goalId), eq(goal.ownerId, me.id)));
   revalidatePath("/calendar");

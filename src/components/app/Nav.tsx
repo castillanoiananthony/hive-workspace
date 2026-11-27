@@ -62,7 +62,7 @@ export function Avatar({ me, size }: { me: Me; size: number }) {
 }
 
 export const Sidebar = ({ me }: { me: Me | null }) => <SidebarView path={usePathname()} me={me} />;
-export const BottomNav = () => <BottomNavView path={usePathname()} />;
+export const BottomNav = ({ me }: { me: Me | null }) => <BottomNavView path={usePathname()} me={me} />;
 
 // Views take the path as a prop so the layout can show them (with nothing highlighted) while the path is unknown.
 export function SidebarView({ path, me }: { path: string; me: Me | null }) {
@@ -85,7 +85,7 @@ export function SidebarView({ path, me }: { path: string; me: Me | null }) {
   );
 }
 
-export function BottomNavView({ path }: { path: string }) {
+export function BottomNavView({ path, me = null }: { path: string; me?: Me | null }) {
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
       {MOBILE.map((i) => {
@@ -93,7 +93,10 @@ export function BottomNavView({ path }: { path: string }) {
         return (
           <Link key={i.href} href={i.href} aria-current={on ? "page" : undefined}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${on ? "text-ink" : "text-muted"}`}>
-            <span className={on ? "text-accent-edge" : undefined}><Icon name={i.icon} /></span>
+            {/* "Me" shows your own picture once you've added one */}
+            {i.icon === "me" && me?.avatar
+              ? <span className={`rounded-full ring-2 ${on ? "ring-accent-edge" : "ring-transparent"}`}><Avatar me={me} size={24} /></span>
+              : <span className={on ? "text-accent-edge" : undefined}><Icon name={i.icon} /></span>}
             {i.label}
           </Link>
         );

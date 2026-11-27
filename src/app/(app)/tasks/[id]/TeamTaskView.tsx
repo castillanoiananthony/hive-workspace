@@ -1,0 +1,32 @@
+"use client";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { BackButton } from "@/components/app/BackButton";
+import { markMyPart } from "../../hive/actions";
+
+/** A team task for members who can't edit tasks: read the steps and tick your own part. */
+export function TeamTaskView(p: { id: string; team: { id: string; name: string }; title: string; howToHtml: string; due: string | null; checklist: string[]; links: { title: string; url: string }[]; assigned: boolean; done: boolean }) {
+  const router = useRouter();
+  const [done, setDone] = useState(p.done);
+  const [pending, start] = useTransition();
+  return (
+    <article className="max-w-3xl">
+      <BackButton fallback={`/hive/${p.team.id}`} label={`Back to ${p.team.name}`} />
+      <p className="text-sm text-muted">{p.team.name}</p>
+      <h1 className="font-display mt-1 text-3xl font-semibold sm:text-4xl">{p.title || "Untitled task"}</h1>
+      {p.due && <p className="mt-2"><span className="font-medium">Due:</span> {p.due}</p>}
+      {p.assigned ? (
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-line bg-surface p-4">
+          <p className="flex-1">{done ? "Your part is marked done." : "This is assigned to you."}</p>
+          <button type="button" disabled={pending} onClick={() => start(async () => { await markMyPart(p.id, !done); setDone(!done); router.refresh(); })}
+            className={done ? "min-h-11 rounded-[var(--radius)] border border-line px-4 font-medium" : "min-h-11 rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover"}>
+            {done ? "Undo, I'm not done" : "Mark my part done"}
+          </button>
+        </div>
+      ) : <p className="mt-5 text-muted">This isn&apos;t assigned to you.</p>}
+      {p.howToHtml && (<section className="mt-8"><h2 className="font-display text-lg font-semibold">How to do it</h2><div className="task-notes mt-3 rounded-[var(--radius)] border border-line bg-surface px-4 py-3" dangerouslySetInnerHTML={{ __html: p.howToHtml }} /></section>)}
+      {p.checklist.length > 0 && (<section className="mt-8"><h2 className="font-display text-lg font-semibold">Checklist</h2><ul className="mt-2 list-disc pl-6">{p.checklist.map((c, i) => <li key={i}>{c}</li>)}</ul></section>)}
+      {p.links.length > 0 && (<section className="mt-8"><h2 className="font-display text-lg font-semibold">Links</h2><ul className="mt-2 grid gap-1">{p.links.map((l, i) => <li key={i}><a href={l.url} target="_blank" rel="noreferrer noopener" className="text-accent-text underline underline-offset-4">{l.title}</a></li>)}</ul></section>)}
+    </article>
+  );
+}

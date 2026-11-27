@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { task, team } from "@/db/schema";
 import { buildFeed } from "@/lib/feed";
 import { profileImages } from "@/lib/profile";
+import { inMyTeams } from "@/lib/team-sql";
 import { requireUser } from "@/lib/session";
 import { HomeFeed } from "./HomeFeed";
 
@@ -31,7 +32,7 @@ async function Home() {
     db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime })
       .from(task).where(and(eq(task.ownerId, me.id), isNull(task.teamId), ne(task.status, "done"))).orderBy(asc(task.dueAt)).limit(50),
     db.select({ id: team.id, name: team.name, color: team.color, open: count(task.id) }).from(team)
-      .leftJoin(task, and(eq(task.teamId, team.id), ne(task.status, "done"))).where(eq(team.ownerId, me.id)).groupBy(team.id).orderBy(asc(team.name)),
+      .leftJoin(task, and(eq(task.teamId, team.id), ne(task.status, "done"))).where(inMyTeams(me.id)).groupBy(team.id).orderBy(asc(team.name)),
   ]);
   return (
     <HomeFeed

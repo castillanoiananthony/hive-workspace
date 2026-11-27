@@ -7,6 +7,7 @@ import { Resend } from "resend";
 import { db } from "@/db";
 import { assignment, checklistItem, emailLog, task, taskLink, team, teamMember, template, user } from "@/db/schema";
 import { DigestEmail, digestText, type DigestProps } from "@/emails/DigestEmail";
+import { InviteEmail, inviteText } from "@/emails/InviteEmail";
 import { TaskEmail, taskEmailText, type TaskEmailProps } from "@/emails/TaskEmail";
 import { formatDue, utcToZoned, zonedToUtc } from "./dates";
 import { docToHtml, docToText } from "./doc-to-html";
@@ -37,7 +38,7 @@ async function unsubscribeLinks(memberId: string) {
 
 // ---------- send exactly once ----------
 
-type Kind = "assign" | "remind3" | "remind1" | "digest";
+type Kind = "assign" | "remind3" | "remind1" | "digest" | "invite";
 
 /**
  * Claims `dedupeKey` in the email log before sending. The unique key means a second run (or two runs at once)
@@ -198,6 +199,20 @@ export async function runRecurring(now = new Date()) {
     created++;
   }
   return created;
+}
+
+/** "X added you to Team": a sign-up invite, or a heads-up for people who already have an account. Once per member. */
+export async function sendInvites(memberIds: string[], inviter: string) {
+  for (const id of memberIds) {
+    const [r] = await db.select({ m: teamMember, t: team }).from(teamMember).innerJoin(team, eq(teamMember.teamId, team.id)).where(eq(teamMember.id, id));
+    if (!r || r.m.isAdmin) continue;
+    const logId = await claim(`invite:${r.m.id}`, { teamId: r.t.id, memberId: r.m.id, taskId: null, kind: "invite", recipient: r.m.email });
+    if (!logId) continue;
+    const unsub = await unsubscribeLinks(r.m.id);
+    const hasAccount = Boolean(r.m.userId);
+    const props = { app: app(), team: r.t.name, teamColor: r.t.color, inviter, memberName: r.m.name, hasAccount, url: hasAccount ? `${app()}/hive/${r.t.id}` : `${app()}/login`, unsubscribeUrl: unsub.page };
+    await deliver(logId, r.m.email, `${inviter} added you to ${r.t.name}`, createElement(InviteEmail, props), inviteText(props), unsub.oneClick);
+  }
 }
 
 /** Everything the hourly scheduler does, in order. Safe to run twice: every step claims its work first. */

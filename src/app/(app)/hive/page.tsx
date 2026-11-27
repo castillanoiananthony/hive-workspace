@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { and, count, eq, isNotNull, ne } from "drizzle-orm";
+import { and, count, isNotNull, ne } from "drizzle-orm";
 import Link from "next/link";
 import { Suspense } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
@@ -7,6 +7,7 @@ import { HexBadge } from "@/components/app/HexBadge";
 import { db } from "@/db";
 import { task, team, teamMember } from "@/db/schema";
 import { requireUser } from "@/lib/session";
+import { inMyTeams } from "@/lib/team-sql";
 import { NewTeamButton } from "./NewTeam";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { BackButton } from "@/components/app/BackButton";
@@ -26,7 +27,7 @@ export default function HivePage() {
 
 async function Teams() {
   const me = await requireUser();
-  const teams = await db.select().from(team).where(eq(team.ownerId, me.id)).orderBy(team.createdAt);
+  const teams = await db.select().from(team).where(inMyTeams(me.id)).orderBy(team.createdAt);
   const [members, open] = await Promise.all([
     db.select({ teamId: teamMember.teamId, n: count() }).from(teamMember).groupBy(teamMember.teamId),
     db.select({ teamId: task.teamId, n: count() }).from(task).where(and(isNotNull(task.teamId), ne(task.status, "done"))).groupBy(task.teamId),
@@ -37,13 +38,13 @@ async function Teams() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold">The Hive</h1>
-          <p className="mt-1 text-muted">Your teams. Teammates only need an email address; HIVE-WORKSPACE sends them the reminders.</p>
+          <p className="mt-1 text-muted">Your teams. Invite people by email or with a join link; HIVE-WORKSPACE sends the reminders.</p>
         </div>
         <NewTeamButton />
       </div>
       <div className="mt-8">
         {teams.length === 0 ? (
-          <EmptyState pose="idle" title="No teams yet" body="Make a team for a group project or an org. Add everyone's email and assign tasks; they never need to sign up." action={<NewTeamButton />} />
+          <EmptyState pose="idle" title="No teams yet" body="Make a team for a group project or an org, invite everyone by email or with a join link, and assign tasks." action={<NewTeamButton />} />
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {teams.map((t) => (

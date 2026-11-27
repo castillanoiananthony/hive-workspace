@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { assignment, goal, task, team, teamMember } from "@/db/schema";
 import { computeProgress } from "./progress";
+import { inMyTeams, inTeamsICanManage } from "./team-sql";
 
 /**
  * The Home feed, built from what already happened in the app (no separate activity log).
@@ -19,11 +20,11 @@ export async function buildFeed(userId: string, limit = 40): Promise<FeedItem[]>
   const [teamDone, myDone, teamTasks, goals, allTasks] = await Promise.all([
     db.select({ id: assignment.id, at: assignment.doneAt, member: teamMember.name, color: team.color, team: team.name, teamId: team.id, task: task.title, taskId: task.id })
       .from(assignment).innerJoin(task, eq(assignment.taskId, task.id)).innerJoin(team, eq(task.teamId, team.id)).innerJoin(teamMember, eq(assignment.memberId, teamMember.id))
-      .where(and(eq(team.ownerId, userId), isNotNull(assignment.doneAt))).orderBy(desc(assignment.doneAt)).limit(limit),
+      .where(and(inMyTeams(userId), isNotNull(assignment.doneAt))).orderBy(desc(assignment.doneAt)).limit(limit),
     db.select({ id: task.id, at: task.updatedAt, task: task.title, goalId: task.goalId })
       .from(task).where(and(eq(task.ownerId, userId), isNull(task.teamId), eq(task.status, "done"))).orderBy(desc(task.updatedAt)).limit(limit),
     db.select({ id: task.id, at: task.createdAt, task: task.title, team: team.name, teamId: team.id, color: team.color, dueAt: task.dueAt, hasTime: task.hasTime })
-      .from(task).innerJoin(team, eq(task.teamId, team.id)).where(and(eq(team.ownerId, userId), ne(task.title, ""))).orderBy(desc(task.createdAt)).limit(limit),
+      .from(task).innerJoin(team, eq(task.teamId, team.id)).where(and(inTeamsICanManage(userId), ne(task.title, ""))).orderBy(desc(task.createdAt)).limit(limit),
     db.select().from(goal).where(and(eq(goal.ownerId, userId), isNull(goal.archivedAt))),
     db.select({ goalId: task.goalId, status: task.status }).from(task).where(and(eq(task.ownerId, userId), isNull(task.teamId))),
   ]);

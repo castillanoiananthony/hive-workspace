@@ -4,34 +4,10 @@ import { PublicTopBar } from "@/components/app/PublicTopBar";
 
 export const metadata: Metadata = { title: "Meet the developer" };
 
-const PROJECTS = [
-  {
-    name: "CEURA-LPN",
-    role: "Researcher and developer",
-    text: "An encrypted, solar-powered offline network that lets schools, health centres and LGUs share lessons, medical guides and disaster alerts over local Wi-Fi with no internet. File transfers got 58.6% faster.",
-  },
-  {
-    name: "Aeroscraping",
-    role: "Creator and developer",
-    text: "A live aerospace research search engine. Search one aircraft and it finds the exact model, its three-view drawings and the research papers behind it, from seven open data sources.",
-    href: "https://aeroscraping.online",
-  },
-  {
-    name: "ASCEND",
-    role: "Lead developer, NASA Space Apps Challenge 2026",
-    text: "A Unity game where players plan a space mission, build the rocket and satellite, and fly it to orbit, built by a team in 48 hours.",
-  },
-  {
-    name: "ALSA: Tan-aw Catbalogan",
-    role: "Lead developer, city hackathon",
-    text: "A community app connecting Catbalogan residents with local government services.",
-  },
-];
-
 const LINKS = [
   { label: "GitHub", href: "https://github.com/castillanoiananthony" },
   { label: "LinkedIn", href: "https://www.linkedin.com/in/ian-anthony-h-castillano-41a345442" },
-  { label: "Aeroscraping", href: "https://aeroscraping.online" },
+  { label: "Facebook", href: "https://www.facebook.com/ian.anthony.castillano.2025" },
 ];
 
 export default function DeveloperPage() {
@@ -75,24 +51,25 @@ export default function DeveloperPage() {
             </p>
             <p>
               HIVE-WORKSPACE fixes both. Your year goals break down into months and weeks, and every task you tick off fills the honeycomb.
-              Your team gets the reminders by email, and they can mark their part done with one click, no account needed.
+              Your team gets the reminders by email and can mark their part done with one click, and inside the app every team has its own feed, roles and chart.
             </p>
           </div>
         </section>
 
         <section aria-labelledby="built" className="mt-16">
-          <h2 id="built" className="font-display text-2xl font-semibold">Other things I&apos;ve built</h2>
-          <ul className="mt-6 grid gap-x-10 gap-y-8 sm:grid-cols-2">
-            {PROJECTS.map((p) => (
-              <li key={p.name} className="border-l-2 border-accent-edge pl-5">
-                <h3 className="font-display text-lg font-semibold">
-                  {p.href ? <a href={p.href} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">{p.name}</a> : p.name}
-                </h3>
-                <p className="text-sm text-muted">{p.role}</p>
-                <p className="mt-2">{p.text}</p>
-              </li>
-            ))}
-          </ul>
+          <h2 id="built" className="font-display text-2xl font-semibold">Also by Ian</h2>
+          <article className="mt-6 flex flex-wrap items-center gap-6 rounded-[var(--radius)] border border-line bg-surface p-6 sm:p-8">
+            <div className="min-w-0 flex-1 basis-72">
+              <h3 className="font-display text-xl font-semibold">Aeroscraping</h3>
+              <p className="mt-2 max-w-[60ch] text-muted">
+                A live aerospace research search engine. Search one aircraft and it finds the exact model, its three-view drawings
+                and the research papers behind it, from seven open data sources including NASA NTRS and OpenAlex.
+              </p>
+            </div>
+            <a href="https://aeroscraping.online" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover">
+              Visit Aeroscraping <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          </article>
         </section>
 
         <section aria-labelledby="also" className="mt-16 border-t border-line pt-8">

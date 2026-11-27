@@ -35,10 +35,18 @@ const CHAPTERS: Chapter[] = [
     what: "A private calendar link keeps your due dates in Google Calendar, Outlook or Apple Calendar.",
     steps: ["Go to Settings and find Calendar link.", "Click Create my calendar link, then Copy link.", "In Google Calendar: Other calendars → + → From URL → paste → Add calendar."],
     tip: "Anyone with the link can see your task titles. If it leaks, click “Make a new link”.", try: { href: "/settings#calendar-feed", label: "Get my calendar link" } },
-  { id: "teams", part: "The Hive", title: "Make a team", pose: "wave",
-    what: "A team is a name, a colour and a list of people's emails. Your teammates never sign up; HIVE-WORKSPACE emails them for you.",
-    steps: ["Open The Hive and click New team.", "In Roster, paste everyone's emails, separated by commas or new lines.", "“Ana Cruz <ana@school.edu>” keeps their name; otherwise it's guessed from the email."],
+  { id: "teams", part: "The Hive", title: "Make a team and invite people", pose: "wave",
+    what: "You become the team's admin. Invite people by email, or turn on a join link and share it in your group chat. Invited people still get task emails until they sign up.",
+    steps: ["Open The Hive and click New team.", "In Members, paste everyone's emails, separated by commas or new lines, and click Send invites.", "Or click Turn on the join link and share it. Switch it off once everyone's in."],
     try: { href: "/hive", label: "Make a team" } },
+  { id: "comb", part: "The Hive", title: "The Comb", pose: "idle",
+    what: "Each team has its own feed. Members post updates, and new tasks and finished work show up on their own.",
+    steps: ["Open a team; The Comb is the first tab.", "Write an update and click Post.", "Delete your own posts any time (the admin can remove any post)."],
+    try: { href: "/hive", label: "Open a team" } },
+  { id: "hierarchy", part: "The Hive", title: "Hierarchy, roles and Hive control", pose: "celebrate",
+    what: "The admin sits at the top of the team chart. The outline on the left shows who reports to whom: the further someone is indented, the further down the chain they are.",
+    steps: ["Open Hierarchy. Drag a name onto the right side of someone's row to put them under that person, or use the arrow buttons.", "Pick each person's role (Co-leader, Member, or your own roles from Team settings).", "As admin, click Hive control on anyone to choose exactly what they may do: edit nicknames, create tasks, manage members and more.", "Anyone can give themselves a nickname; editing other people's needs that power."],
+    try: { href: "/hive", label: "Open a team" } },
   { id: "buzz", part: "The Hive", title: "Assign a task (Buzz emails)", pose: "fly",
     what: "Team tasks are emailed to the people you assign, with the steps and a Mark done button. Reminders go out 3 days and 1 day before the due date.",
     steps: ["In your team, click New team task.", "Give it a title, a due date and the steps under “How to do it”.", "Tick who should do it, or click Assign whole team.", "They're emailed a minute after your last change, or click Send now."],
@@ -102,7 +110,7 @@ export function Tutorial() {
           <Bee pose="wave" size={88} animate />
           <div className="min-w-0 flex-1 basis-64">
             <p className="font-display text-xl font-semibold">Hi, I&apos;m Hexley. Let&apos;s look around.</p>
-            <p className="mt-1 text-muted">Twelve short chapters, about a minute each. Every chapter has a button that takes you to the right place, and you can come back here any time from the menu.</p>
+            <p className="mt-1 text-muted">{CHAPTERS.length} short chapters, about a minute each. Every chapter has a button that takes you to the right place, and you can come back here any time from the menu.</p>
           </div>
           <a href={`#${CHAPTERS.find((c) => !read.includes(c.id))?.id ?? CHAPTERS[0].id}`} className="inline-flex min-h-11 items-center rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover">
             {read.length === 0 ? "Start the tour" : read.length === CHAPTERS.length ? "Read it again" : "Continue where I left off"}
@@ -126,7 +134,7 @@ export function Tutorial() {
                   <ol className="mt-2 grid list-decimal gap-1.5 pl-5 marker:text-muted">{c.steps.map((s) => <li key={s}>{s}</li>)}</ol>
                   {c.tip && <p className="mt-4 rounded-[var(--radius)] bg-raised p-3 text-sm"><span className="font-semibold">Tip: </span>{c.tip}</p>}
                 </div>
-                {c.demo && <div className="md:w-72"><Demo kind={c.demo} /></div>}
+                {c.demo && <div className="min-w-0 md:w-72"><Demo kind={c.demo} /></div>}
               </div>
               <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-line pt-5">
                 {c.try && <Link href={c.try.href} className="inline-flex min-h-11 items-center rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover">{c.try.label}</Link>}
@@ -164,7 +172,7 @@ function Demo({ kind }: { kind: NonNullable<Chapter["demo"]> }) {
         <p className="text-sm font-medium">Practice: drag to fill the cell</p>
         <div className="mt-3 flex items-center gap-4">
           <HexProgress value={v} size={64} label="Practice goal" />
-          <input type="range" min={0} max={100} value={v} onChange={(e) => setV(+e.target.value)} aria-label="Practice progress" className="flex-1 accent-[var(--accent)]" />
+          <input type="range" min={0} max={100} value={v} onChange={(e) => setV(+e.target.value)} aria-label="Practice progress" className="w-full min-w-0 flex-1 accent-[var(--accent)]" />
         </div>
       </div>
     );
