@@ -13,6 +13,7 @@ import { Hierarchy } from "./Hierarchy";
 import { MemberAvatar } from "./MemberAvatar";
 import { Members } from "./Members";
 import { Roles } from "./Roles";
+import { Vault, type VaultLink } from "./Vault";
 import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT } from "./types";
 
 type Team = TeamT;
@@ -21,11 +22,11 @@ type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; tz: string };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
-  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
+  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
   { id: "templates", label: "Templates", need: "templates" }, { id: "log", label: "Email log", need: "log" }, { id: "settings", label: "Team settings", need: "settings" },
 ];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -62,6 +63,7 @@ export function TeamView(props: Props) {
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-6">
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
         {tab === "board" && <Board {...props} onRoster={() => setTab("members")} />}
+        {tab === "vault" && <Vault team={team} links={props.links} members={members} me={me} />}
         {tab === "hierarchy" && <Hierarchy team={team} members={members} roles={props.roles} me={me} />}
         {tab === "members" && <Members team={team} members={members} roles={props.roles} me={me} />}
         {tab === "templates" && <Templates team={team} members={members} templates={props.templates} />}

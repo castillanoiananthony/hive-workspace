@@ -4,7 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { assignment, checklistItem, combPost, task, taskLink, team, teamMember, teamRole, template } from "@/db/schema";
+import { assignment, checklistItem, combPost, task, taskLink, team, teamLink, teamMember, teamRole, template } from "@/db/schema";
 import { sendInvites, sendPendingAssignments } from "@/lib/buzz";
 import { ALL_PERMS, DEFAULT_PERMS, type Perm } from "@/lib/hive-perms";
 import { parseRoster } from "@/lib/roster";
@@ -241,6 +241,32 @@ export async function markMyPart(taskId: string, done: boolean) {
   await db.update(task).set({ status: open.length === 0 ? "done" : "todo" }).where(eq(task.id, taskId));
   refresh(t.teamId!);
   revalidatePath(`/tasks/${taskId}`);
+}
+
+// ---------- Hive Vault ----------
+
+const safeLink = (u: string) => {
+  try { const x = new URL(u.trim().match(/^[a-z]+:\/\//i) ? u.trim() : `https://${u.trim()}`); return x.protocol === "http:" || x.protocol === "https:" ? x.toString() : null; } catch { return null; }
+};
+
+export async function addVaultLink(teamId: string, input: { title: string; url: string; note?: string }) {
+  const me = await requireUser();
+  const { me: member } = await requirePerm(me.id, teamId, "vault");
+  const url = safeLink(String(input.url ?? ""));
+  if (!url) throw new Error("That doesn't look like a web address. Paste the full link, starting with https://");
+  const count = await db.select({ id: teamLink.id }).from(teamLink).where(eq(teamLink.teamId, teamId));
+  if (count.length >= 300) throw new Error("The Vault holds up to 300 links. Remove some old ones first.");
+  await db.insert(teamLink).values({ teamId, memberId: member.id, url, title: text(input.title, 120) || new URL(url).hostname.replace(/^www\./, ""), note: text(input.note, 300) || null });
+  refresh(teamId);
+}
+
+export async function deleteVaultLink(linkId: string) {
+  const me = await requireUser();
+  const [l] = await db.select().from(teamLink).where(eq(teamLink.id, linkId));
+  if (!l) return;
+  await requirePerm(me.id, l.teamId, "vault");
+  await db.delete(teamLink).where(eq(teamLink.id, linkId));
+  refresh(l.teamId);
 }
 
 // ---------- team tasks and templates ----------

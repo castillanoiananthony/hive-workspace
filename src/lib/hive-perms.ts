@@ -1,6 +1,7 @@
 // "Hive control": what a team member is allowed to do. The admin (leader) always has every power.
 export const PERMS = [
   { key: "post", label: "Post on The Comb", hint: "Share updates with the team" },
+  { key: "vault", label: "Add to the Hive Vault", hint: "Share Drive folders, GitHub repos and other links, and tidy them up" },
   { key: "nicknames", label: "Edit nicknames", hint: "Change anyone's nickname in this team" },
   { key: "tasks", label: "Create & assign tasks", hint: "Make team tasks, choose who does them, edit them" },
   { key: "members", label: "Manage members", hint: "Invite people, share the join link, remove members" },

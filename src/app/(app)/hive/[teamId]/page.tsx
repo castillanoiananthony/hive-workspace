@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { BackButton } from "@/components/app/BackButton";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { db } from "@/db";
-import { assignment, combPost, emailLog, task, teamMember, teamRole, template, userImage } from "@/db/schema";
+import { assignment, combPost, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
 import { ALL_PERMS, can } from "@/lib/hive-perms";
 import { requireUser } from "@/lib/session";
 import { ensureRoles, teamAccess } from "@/lib/teams";
@@ -31,7 +31,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
   if (!access) notFound();
   await ensureRoles(teamId);
   const { team: t, me: mine } = access;
-  const [members, roles, tasks, templates, log, posts] = await Promise.all([
+  const [members, roles, tasks, templates, log, posts, links] = await Promise.all([
     db.select().from(teamMember).where(eq(teamMember.teamId, teamId)).orderBy(asc(teamMember.position), asc(teamMember.createdAt)),
     db.select().from(teamRole).where(eq(teamRole.teamId, teamId)).orderBy(asc(teamRole.position), asc(teamRole.createdAt)),
     db.select({ id: task.id, title: task.title, status: task.status, dueAt: task.dueAt, hasTime: task.hasTime, createdAt: task.createdAt }).from(task).where(eq(task.teamId, teamId)).orderBy(asc(task.dueAt), asc(task.createdAt)),
@@ -42,6 +42,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
           .where(eq(emailLog.teamId, teamId)).orderBy(desc(emailLog.createdAt)).limit(100)
       : Promise.resolve([]),
     db.select().from(combPost).where(eq(combPost.teamId, teamId)).orderBy(desc(combPost.createdAt)).limit(50),
+    db.select().from(teamLink).where(eq(teamLink.teamId, teamId)).orderBy(desc(teamLink.createdAt)),
   ]);
   const taskIds = tasks.map((x) => x.id);
   const userIds = members.map((m) => m.userId).filter((x): x is string => Boolean(x));
@@ -62,6 +63,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
         joined: Boolean(m.userId), isAdmin: m.isAdmin, roleId: m.roleId, perms: m.isAdmin ? ALL_PERMS : m.perms, parentId: m.parentId, position: m.position,
         avatar: avatarOf(m.userId), unsubscribed: Boolean(m.unsubscribedAt),
       }))}
+      links={links.map((l) => ({ id: l.id, title: l.title, url: l.url, note: l.note, memberId: l.memberId, at: l.createdAt.toISOString() }))}
       roles={roles.map((r) => ({ id: r.id, name: r.name, perms: r.perms }))}
       tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime }))}
       assigned={assigned.map((a) => ({ ...a, doneAt: a.doneAt?.toISOString() ?? null }))}

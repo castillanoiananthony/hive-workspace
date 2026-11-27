@@ -43,6 +43,13 @@
       "when": 1795791387414,
       "tag": "0005_invite_email",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795793731288,
+      "tag": "0006_hive_vault",
+      "breakpoints": true
     }
   ]
 }

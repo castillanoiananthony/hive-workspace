@@ -15,7 +15,7 @@ export function Members({ team, members, roles, me }: { team: TeamT; members: Me
   const roleName = (m: MemberT) => (m.isAdmin ? "Admin" : roles.find((r) => r.id === m.roleId)?.name ?? "No role");
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
-      <div className="grid content-start gap-8">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-8">
         <section aria-labelledby="joined-h">
           <h2 id="joined-h" className="font-display text-xl font-semibold">Members ({joined.length})</h2>
           <ul className="mt-3 divide-y divide-line rounded-[var(--radius)] border border-line bg-surface">
@@ -33,7 +33,7 @@ export function Members({ team, members, roles, me }: { team: TeamT; members: Me
         )}
       </div>
       {canManage ? (
-        <div className="grid content-start gap-6">
+        <div className="grid min-w-0 content-start gap-6">
           <Invite team={team} />
           <JoinLink team={team} />
         </div>

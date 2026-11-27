@@ -222,3 +222,14 @@ export const combPost = pgTable("comb_post", {
   body: text("body").notNull(),
   createdAt: created(),
 }, (t) => [index("comb_team_idx").on(t.teamId, t.createdAt)]);
+
+// Hive Vault: the team's shared links (Drive folders, GitHub repos, docs…)
+export const teamLink = pgTable("team_link", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  memberId: text("member_id").references(() => teamMember.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  url: text("url").notNull(),
+  note: text("note"),
+  createdAt: created(),
+}, (t) => [index("team_link_team_idx").on(t.teamId)]);

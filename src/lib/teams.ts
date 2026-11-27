@@ -49,7 +49,7 @@ export async function linkInvites(userId: string, email: string) {
 const DEFAULT_ROLES: { name: string; perms: Perm[] }[] = [
   { name: "Leader", perms: ALL_PERMS },
   { name: "Co-leader", perms: ["post", "nicknames", "tasks", "members", "hierarchy", "templates", "log"] },
-  { name: "Member", perms: DEFAULT_PERMS },
+  { name: "Member", perms: [...DEFAULT_PERMS, "vault"] },
 ];
 
 /** A new team: the creator is its admin and Leader, with three starter roles. */
