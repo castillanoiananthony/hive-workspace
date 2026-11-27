@@ -14,8 +14,13 @@
   "dependencies": {
     "@neon/config": "^1.14.8",
     "@neon/env": "^2.1.11",
+    "@tiptap/extensions": "^3.35.0",
+    "@tiptap/pm": "^3.35.0",
+    "@tiptap/react": "^3.35.0",
+    "@tiptap/starter-kit": "^3.35.0",
     "@vercel/functions": "^3.11.4",
     "better-auth": "^1.7.28",
+    "chrono-node": "^2.10.3",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.6",
     "pg": "^8.23.1",

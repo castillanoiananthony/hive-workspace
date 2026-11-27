@@ -27,8 +27,11 @@ function Icon({ name }: { name: (typeof ITEMS)[number]["icon"] }) {
   );
 }
 
-export function Sidebar() {
-  const path = usePathname();
+export const Sidebar = () => <SidebarView path={usePathname()} />;
+export const BottomNav = () => <BottomNavView path={usePathname()} />;
+
+// Views take the path as a prop so the layout can show them (with nothing highlighted) while the path is unknown.
+export function SidebarView({ path }: { path: string }) {
   return (
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
       <Link href="/cell" className="mb-8 px-3"><Logo size={24} /></Link>
@@ -51,8 +54,7 @@ export function Sidebar() {
   );
 }
 
-export function BottomNav() {
-  const path = usePathname();
+export function BottomNavView({ path }: { path: string }) {
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
       {ITEMS.map((i) => {
