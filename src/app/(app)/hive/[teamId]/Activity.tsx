@@ -1,23 +1,24 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { nameOf, type AssignedT, type MemberT, type TaskT } from "./types";
+import { nameOf, type AssignedT, type LogT, type MemberT, type TaskT } from "./types";
 
-export type DayT = { date: string; label: string; done: number; created: number; posts: number };
+export type DayT = { date: string; label: string; done: number; created: number; posts: number; updates: number };
 const C = { todo: "var(--viz-1)", doing: "var(--viz-2)", done: "var(--viz-3)" } as const;
 const card = "rounded-[calc(var(--radius)*2)] border border-line bg-surface p-5 sm:p-6";
 
 /** Team activity: where the tasks stand (donut), who has done what (bars), and the last 14 days (lines). */
-export function Activity({ tasks, assigned, members, days }: { tasks: TaskT[]; assigned: AssignedT[]; members: MemberT[]; days: DayT[] }) {
+export function Activity({ tasks, assigned, members, days, logs }: { tasks: TaskT[]; assigned: AssignedT[]; members: MemberT[]; days: DayT[]; logs: LogT[] }) {
   const status = (["todo", "doing", "done"] as const).map((k) => ({ k, n: tasks.filter((t) => t.status === k).length }));
   const people = members.map((m) => {
     const mine = assigned.filter((a) => a.memberId === m.id);
-    return { m, done: mine.filter((a) => a.doneAt).length, open: mine.filter((a) => !a.doneAt).length };
-  }).filter((p) => p.done + p.open > 0).sort((a, b) => b.done - a.done || b.open - a.open);
+    const pct = mine.length ? Math.round(mine.reduce((s, a) => s + (a.doneAt ? 100 : a.progress), 0) / mine.length) : 0;
+    return { m, done: mine.filter((a) => a.doneAt).length, open: mine.filter((a) => !a.doneAt).length, pct, updates: logs.filter((l) => l.memberId === m.id).length };
+  }).filter((p) => p.done + p.open > 0).sort((a, b) => b.pct - a.pct || b.updates - a.updates);
   const totalParts = people.reduce((s, p) => s + p.done + p.open, 0), doneParts = people.reduce((s, p) => s + p.done, 0);
   return (
     <div className="grid gap-6">
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[["Tasks", tasks.length], ["Done", status[2].n], ["Parts finished", `${doneParts}/${totalParts}`], ["Done in 14 days", days.reduce((s, d) => s + d.done, 0)]].map(([k, v]) => (
+        {[["Tasks", tasks.length], ["Done", status[2].n], ["Parts finished", `${doneParts}/${totalParts}`], ["Updates in 14 days", days.reduce((s, d) => s + d.updates, 0)]].map(([k, v]) => (
           <div key={k} className="rounded-[calc(var(--radius)*2)] border border-line bg-surface px-4 py-3"><dt className="text-sm text-muted">{k}</dt><dd className="font-display text-3xl font-semibold tabular-nums">{v}</dd></div>
         ))}
       </dl>
@@ -27,9 +28,9 @@ export function Activity({ tasks, assigned, members, days }: { tasks: TaskT[]; a
           <Donut parts={status.map((s) => ({ label: LABEL[s.k], n: s.n, color: C[s.k] }))} />
         </section>
         <section aria-labelledby="bar-h" className={card}>
-          <h2 id="bar-h" className="font-display text-lg font-semibold">Who has done what</h2>
-          <p className="text-sm text-muted">Each person&apos;s assigned parts of team tasks.</p>
-          {people.length ? <Bars rows={people.map((p) => ({ name: nameOf(p.m), done: p.done, open: p.open }))} /> : <p className="mt-6 text-muted">Assign a team task to see this.</p>}
+          <h2 id="bar-h" className="font-display text-lg font-semibold">Everyone&apos;s progress</h2>
+          <p className="text-sm text-muted">Average progress on their parts of team tasks, from each person&apos;s slider.</p>
+          {people.length ? <Bars rows={people.map((p) => ({ name: nameOf(p.m), pct: p.pct, done: p.done, open: p.open, updates: p.updates }))} /> : <p className="mt-6 text-muted">Assign a team task to see this.</p>}
         </section>
       </div>
       <section aria-labelledby="line-h" className={card}>
@@ -83,29 +84,25 @@ function Donut({ parts }: { parts: { label: string; n: number; color: string }[]
   );
 }
 
-function Bars({ rows }: { rows: { name: string; done: number; open: number }[] }) {
-  const max = Math.max(1, ...rows.map((r) => r.done + r.open));
+function Bars({ rows }: { rows: { name: string; pct: number; done: number; open: number; updates: number }[] }) {
   return (
-    <div className="mt-4 grid gap-3">
-      <Legend items={[{ label: "Done", color: C.done }, { label: "Still open", color: C.todo }]} />
-      <ul className="grid gap-3">
-        {rows.slice(0, 12).map((r) => (
-          <li key={r.name} className="grid gap-1">
-            <div className="flex justify-between gap-3 text-sm"><span className="truncate">{r.name}</span><span className="shrink-0 tabular-nums text-muted">{r.done} done, {r.open} open</span></div>
-            <div className="flex h-3 gap-[2px]" title={`${r.name}: ${r.done} done, ${r.open} open`}>
-              {r.done > 0 && <span className="rounded-[4px]" style={{ width: `${(r.done / max) * 100}%`, background: C.done }} />}
-              {r.open > 0 && <span className="rounded-[4px]" style={{ width: `${(r.open / max) * 100}%`, background: C.todo }} />}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="mt-4 grid gap-4">
+      {rows.slice(0, 15).map((r) => (
+        <li key={r.name} className="grid gap-1">
+          <div className="flex justify-between gap-3 text-sm"><span className="truncate font-medium">{r.name}</span><span className="shrink-0 font-semibold tabular-nums">{r.pct}%</span></div>
+          <div className="h-3 overflow-hidden rounded-full bg-raised" title={`${r.name}: ${r.pct}%`}>
+            <span className="block h-full rounded-full" style={{ width: `${r.pct}%`, background: r.pct === 100 ? C.done : "var(--viz-4)" }} />
+          </div>
+          <p className="text-sm text-muted tabular-nums">{r.done} done, {r.open} open, {r.updates} {r.updates === 1 ? "update" : "updates"}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 function Lines({ days }: { days: DayT[] }) {
   const [hover, setHover] = useState<number | null>(null);
-  const series = [{ key: "done", label: "Parts marked done", color: C.done }, { key: "created", label: "Tasks created", color: C.todo }, { key: "posts", label: "Comb posts", color: C.doing }] as const;
+  const series = [{ key: "done", label: "Parts marked done", color: C.done }, { key: "created", label: "Tasks created", color: C.todo }, { key: "posts", label: "Comb posts", color: C.doing }, { key: "updates", label: "Progress updates", color: "var(--viz-4)" }] as const;
   // the chart is drawn at its real width so the axis text stays readable on phones
   const box = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(640);
@@ -116,7 +113,7 @@ function Lines({ days }: { days: DayT[] }) {
   }, []);
   const H = 220, L = 32, R = 12, T = 12, B = 28;
   const every = Math.max(1, Math.ceil((days.length * 56) / W)); // room for about one label per 56px
-  const max = Math.max(4, ...days.flatMap((d) => [d.done, d.created, d.posts]));
+  const max = Math.max(4, ...days.flatMap((d) => [d.done, d.created, d.posts, d.updates]));
   const x = (i: number) => L + (i * (W - L - R)) / Math.max(1, days.length - 1);
   const y = (v: number) => T + (1 - v / max) * (H - T - B);
   const ticks = [0, Math.round(max / 2), max];
@@ -149,7 +146,7 @@ function Lines({ days }: { days: DayT[] }) {
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-left tabular-nums">
             <thead><tr className="text-muted"><th className="py-1 pr-3 font-medium">Day</th>{series.map((s) => <th key={s.key} className="py-1 pr-3 font-medium">{s.label}</th>)}</tr></thead>
-            <tbody>{days.map((d) => <tr key={d.date} className="border-t border-line"><td className="py-1 pr-3">{d.label}</td><td className="py-1 pr-3">{d.done}</td><td className="py-1 pr-3">{d.created}</td><td className="py-1 pr-3">{d.posts}</td></tr>)}</tbody>
+            <tbody>{days.map((d) => <tr key={d.date} className="border-t border-line"><td className="py-1 pr-3">{d.label}</td><td className="py-1 pr-3">{d.done}</td><td className="py-1 pr-3">{d.created}</td><td className="py-1 pr-3">{d.posts}</td><td className="py-1 pr-3">{d.updates}</td></tr>)}</tbody>
           </table>
         </div>
       </details>

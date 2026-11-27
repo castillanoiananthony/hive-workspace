@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { datedTasks } from "@/lib/calendar-data";
 import { utcToZoned } from "@/lib/dates";
+import { importanceOf } from "@/lib/importance";
 import { requireUser } from "@/lib/session";
 import { HiveCalendar } from "./HiveCalendar";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
@@ -29,7 +30,7 @@ async function Cal() {
       tasks={rows.map((t) => {
         const z = utcToZoned(t.dueAt!, me.timezone);
         // "wall time" in the user's zone; the calendar runs in UTC mode so it shows these numbers unchanged
-        return { id: t.id, title: t.title || "Untitled task", done: t.status === "done", date: z.date, time: t.hasTime ? z.time : null, space: t.teamId ?? "cell", spaceName: t.teamName ?? "My Cell", color: t.teamColor };
+        return { id: t.id, title: t.title || "Untitled task", done: t.status === "done", date: z.date, time: t.hasTime ? z.time : null, space: t.teamId ?? "cell", spaceName: t.teamName ?? "My Cell", color: t.teamColor, tint: importanceOf(t.importance, t.importanceColors)?.color ?? null };
       })}
     />
   );

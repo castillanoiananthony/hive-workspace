@@ -19,7 +19,7 @@ export async function findAssignment(token: string) {
 export async function setDone(token: string, done: boolean) {
   const r = await findAssignment(token);
   if (!r) return null;
-  if (done && !r.a.doneAt) await db.update(assignment).set({ doneAt: new Date() }).where(eq(assignment.id, r.a.id));
+  if (done && !r.a.doneAt) await db.update(assignment).set({ doneAt: new Date(), progress: 100 }).where(eq(assignment.id, r.a.id));
   if (!done && r.a.doneAt) await db.update(assignment).set({ doneAt: null }).where(eq(assignment.id, r.a.id));
   // the task itself is done when everyone assigned is done
   const open = await db.select({ id: assignment.id }).from(assignment).where(and(eq(assignment.taskId, r.taskId), isNull(assignment.doneAt)));

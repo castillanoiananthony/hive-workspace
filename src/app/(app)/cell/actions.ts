@@ -93,6 +93,14 @@ export async function deleteGoal(id: string) {
   revalidatePath("/cell");
 }
 
+/** The trash button on a goal card: deletes it straight away (after the card's confirm). Its tasks and smaller goals stay, unlinked. */
+export async function deleteGoalNow(id: string) {
+  const me = await requireUser();
+  await ownGoal(me.id, id);
+  await db.delete(goal).where(and(eq(goal.id, id), eq(goal.ownerId, me.id)));
+  revalidatePath("/cell");
+}
+
 // ---------- tasks ----------
 
 export async function quickAddTask(input: string, goalId: string | null = null, importance = 0) {

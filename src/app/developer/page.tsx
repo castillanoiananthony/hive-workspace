@@ -12,12 +12,12 @@ const LINKS = [
 
 export default function DeveloperPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden">
+    <main className="relative min-h-screen overflow-x-clip">
       <div aria-hidden className="honeycomb honeycomb-layer" />
-      <div className="relative mx-auto max-w-4xl px-5 py-10 sm:px-8 sm:py-14">
-        <PublicTopBar />
+      <PublicTopBar />
+      <div lang="en" className="relative mx-auto max-w-4xl px-5 pb-10 sm:px-8 sm:pb-14 [&_p]:text-justify [&_p]:hyphens-auto">
 
-        <section className="mt-10 grid items-center gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
+        <section className="mt-8 grid items-center gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
           <Bee pose="wave" size={260} face="/dev/ian.webp" animate title="Ian as the HIVE-WORKSPACE bee" className="mx-auto" />
           <div>
             <p className="text-muted">The person inside the bee</p>
@@ -72,7 +72,7 @@ export default function DeveloperPage() {
           </article>
         </section>
 
-        <section aria-labelledby="support" className="mt-16 grid items-center gap-8 rounded-[var(--radius)] border border-line bg-surface p-6 sm:grid-cols-[1fr_auto] sm:p-10">
+        <section aria-labelledby="support" className="mt-16 grid items-start gap-8 rounded-[var(--radius)] border border-line bg-surface p-6 sm:grid-cols-[1fr_auto] sm:p-10">
           <div className="max-w-[52ch]">
             <h2 id="support" className="font-display text-2xl font-semibold">Support HIVE-WORKSPACE</h2>
             <p className="mt-3">

@@ -3,7 +3,8 @@ export type MemberT = { id: string; userId: string | null; name: string; nicknam
 export type RoleT = { id: string; name: string; perms: string[]; isLeader: boolean };
 export type MeT = { memberId: string; isAdmin: boolean; perms: string[] };
 export type TaskT = { id: string; title: string; status: "todo" | "doing" | "done"; dueAt: string | null; hasTime: boolean; importance: number };
-export type AssignedT = { taskId: string; memberId: string; doneAt: string | null };
+export type AssignedT = { taskId: string; memberId: string; doneAt: string | null; progress: number };
+export type LogT = { id: string; taskId: string; memberId: string; progress: number; done: boolean; note: string | null; at: string };
 export type StreamT =
   | { kind: "post"; id: string; at: string; memberId: string | null; body: string; hidden: boolean }
   | { kind: "done"; id: string; at: string; memberId: string | null; taskId: string }

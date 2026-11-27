@@ -9,7 +9,7 @@ import { UndoBar, type Undo } from "@/components/app/UndoBar";
 import { HexProgress } from "@/components/brand/HexProgress";
 import { formatDue } from "@/lib/dates";
 import { parseQuickAdd } from "@/lib/quickadd";
-import { archiveGoal, deleteGoal, newTask, quickAddTask, restoreTask, setTaskStatus, snoozeGoal } from "./actions";
+import { archiveGoal, deleteGoal, deleteGoalNow, newTask, quickAddTask, restoreTask, setTaskStatus, snoozeGoal } from "./actions";
 import { Bee } from "@/components/brand/Bee";
 import { GoalDialog, type GoalDialogMode } from "./GoalDialog";
 
@@ -133,11 +133,13 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
             </ul>
           )}
           {own.length > 0 && <ul className="mt-2 grid gap-1">{own.map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>}
-          <div className="mt-2 flex flex-wrap gap-x-1 text-sm">
-            <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} className="min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 font-medium text-accent-text">Add task</button>
-            {canHaveChildren && <button type="button" onClick={() => onAddChild(g)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Add {g.level === "year" ? "month" : "week"} goal</button>}
-            <button type="button" onClick={() => onEdit(g)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Edit</button>
-            <button type="button" onClick={() => onArchive(g)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Archive</button>
+          {/* a line, then the goal's actions as icons (each has a name for screen readers and a tooltip) */}
+          <div role="toolbar" aria-label={`Actions for ${g.title}`} className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+            <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} title="Add task" className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius)] border border-accent-edge/70 px-3 text-sm font-medium text-accent-text hover:bg-accent/10"><GoalIcon d="M12 5v14M5 12h14" />Task</button>
+            {canHaveChildren && <IconBtn label={`Add ${g.level === "year" ? "month" : "week"} goal`} onClick={() => onAddChild(g)}><polygon points="12,3.5 19.4,7.75 19.4,16.25 12,20.5 4.6,16.25 4.6,7.75" /><path d="M12 9v6M9 12h6" /></IconBtn>}
+            <IconBtn label="Edit goal" onClick={() => onEdit(g)}><path d="M4 20l1.2-4.4L16 4.8l3.2 3.2L8.4 18.8z" /><path d="M13.5 7.3l3.2 3.2" /></IconBtn>
+            <IconBtn label="Archive goal" onClick={() => onArchive(g)}><rect x="3" y="4" width="18" height="5" rx="1" /><path d="M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9M10 13h4" /></IconBtn>
+            <IconBtn label="Delete goal" danger disabled={pending} onClick={() => { if (confirm(`Delete “${g.title}”? Its tasks and smaller goals stay, just without this goal. This can't be undone.`)) start(() => deleteGoalNow(g.id)); }}><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></IconBtn>
           </div>
         </div>
       )}
@@ -303,5 +305,19 @@ export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label
             : "Type a date like “tomorrow” or “Fri 5pm” and it becomes the due date."}
       </p>
     </form>
+  );
+}
+
+function GoalIcon({ d }: { d: string }) {
+  return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={d} /></svg>;
+}
+
+/** A square icon button with a tooltip and a spoken name. */
+function IconBtn({ label, onClick, children, danger = false, disabled = false }: { label: string; onClick: () => void; children: React.ReactNode; danger?: boolean; disabled?: boolean }) {
+  return (
+    <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick}
+      className={`grid size-11 place-items-center rounded-[var(--radius)] border border-line text-muted disabled:opacity-60 ${danger ? "hover:border-danger hover:text-danger" : "hover:border-accent-edge hover:text-ink"}`}>
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+    </button>
   );
 }

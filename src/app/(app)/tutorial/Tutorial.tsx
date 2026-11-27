@@ -57,7 +57,7 @@ const CHAPTERS: Chapter[] = [
     try: { href: "/hive", label: "Open a team" } },
   { id: "buzz", part: "The Hive", title: "Assign a task (Buzz emails)", pose: "fly",
     what: "Team tasks are emailed to the people you assign, with the steps and a Mark done button. Reminders go out 3 days and 1 day before the due date.",
-    steps: ["In your team, click New team task.", "Give it a title, a due date and the steps under “How to do it”.", "Tick who should do it, or click Assign whole team.", "They're emailed a minute after your last change, or click Send now."],
+    steps: ["In your team, click New team task.", "Give it a title, a due date and the steps under “How to do it”.", "Tick who should do it, or click Assign whole team.", "They're emailed a minute after your last change, or click Send now.", "Assigned to a task? Open the team’s Tasks tab, tap it under “Your tasks in this team”, slide your progress, write what you did and press Log progress, or Mark done. Every save is dated in your log and feeds the Activity charts."],
     tip: "Reminders stop as soon as someone marks their part done, and only arrive between 8 AM and 8 PM your time.", try: { href: "/hive", label: "Go to my teams" } },
   { id: "done", part: "The Hive", title: "What teammates see", pose: "celebrate",
     what: "Each email has a big Mark done button. One click marks their part done, with no account and no password, and they can undo it. Every email also has a link to stop emails from that team.",

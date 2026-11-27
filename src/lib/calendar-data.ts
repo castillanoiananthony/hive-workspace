@@ -7,7 +7,7 @@ import { inTeamsICanManage } from "./team-sql";
 /** Every dated task the user should see: personal ones plus tasks in teams they own. */
 export async function datedTasks(userId: string) {
   return db
-    .select({ id: task.id, title: task.title, status: task.status, dueAt: task.dueAt, hasTime: task.hasTime, teamId: task.teamId, teamName: team.name, teamColor: team.color })
+    .select({ id: task.id, title: task.title, status: task.status, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance, teamId: task.teamId, teamName: team.name, teamColor: team.color, importanceColors: team.importanceColors })
     .from(task)
     .leftJoin(team, eq(task.teamId, team.id))
     // personal tasks, every task in teams you manage, and team tasks assigned to you

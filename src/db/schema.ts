@@ -164,8 +164,20 @@ export const assignment = pgTable("assignment", {
   doneTokenHash: text("done_token_hash").notNull().unique(),
   doneAt: timestamp("done_at", { withTimezone: true }),
   notifiedAt: timestamp("notified_at", { withTimezone: true }), // when the assignment email went out
+  progress: smallint("progress").notNull().default(0), // 0-100, the member's own slider
   createdAt: created(),
 }, (t) => [uniqueIndex("assignment_task_member_uq").on(t.taskId, t.memberId)]);
+
+// A dated progress note on someone's part of a team task ("40%: set up the simulator").
+export const progressLog = pgTable("progress_log", {
+  id: id(),
+  assignmentId: text("assignment_id").notNull().references(() => assignment.id, { onDelete: "cascade" }),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  progress: smallint("progress").notNull(),
+  done: boolean("done").notNull().default(false),
+  note: text("note"),
+  createdAt: created(),
+}, (t) => [index("progress_log_assignment_idx").on(t.assignmentId), index("progress_log_team_idx").on(t.teamId, t.createdAt)]);
 
 export const recurrence = pgEnum("recurrence", ["none", "weekly", "monthly"]);
 

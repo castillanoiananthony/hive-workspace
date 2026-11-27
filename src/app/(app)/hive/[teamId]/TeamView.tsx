@@ -1,25 +1,21 @@
 "use client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
 import { HexBadge } from "@/components/app/HexBadge";
 import { BusyOverlay } from "@/components/app/BusyOverlay";
-import { HexCheck } from "@/components/app/HexCheck";
-import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { IMPORTANCE } from "@/lib/importance";
-import { formatDue } from "@/lib/dates";
-import { deleteTeam, deleteTemplate, markMyPart, newTeamTask, updateTeam, updateTemplate } from "../actions";
+import { deleteTeam, deleteTemplate, newTeamTask, updateTeam, updateTemplate } from "../actions";
 import { ColorPicker } from "../NewTeam";
 import { Comb } from "./Comb";
 import { Hierarchy } from "./Hierarchy";
-import { MemberAvatar } from "./MemberAvatar";
 import { Members } from "./Members";
 import { Roles } from "./Roles";
 import { Vault, type VaultLink } from "./Vault";
+import { Board } from "./TeamTasks";
 import { Activity, type DayT } from "./Activity";
 import { HiveCalendar, type CalTask } from "../../calendar/HiveCalendar";
-import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT } from "./types";
+import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT } from "./types";
 
 type Team = TeamT;
 type Member = MemberT;
@@ -27,7 +23,7 @@ type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[] };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[] };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
@@ -69,7 +65,7 @@ export function TeamView(props: Props) {
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
         {tab === "board" && <Board {...props} onRoster={() => setTab("members")} />}
         {tab === "calendar" && (props.calendar.length ? <HiveCalendar tasks={props.calendar} tz={props.tz} editable={has(me, "tasks")} embedded /> : <p className="rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">No team tasks have a due date yet. Give one a date and it shows up here.</p>)}
-        {tab === "activity" && <Activity tasks={tasks} assigned={props.assigned} members={members} days={props.days} />}
+        {tab === "activity" && <Activity tasks={tasks} assigned={props.assigned} members={members} days={props.days} logs={props.logs} />}
         {tab === "vault" && <Vault team={team} links={props.links} members={members} me={me} />}
         {tab === "hierarchy" && <Hierarchy team={team} members={members} roles={props.roles} me={me} />}
         {tab === "members" && <Members team={team} members={members} roles={props.roles} me={me} />}
@@ -78,116 +74,6 @@ export function TeamView(props: Props) {
         {tab === "settings" && <Settings team={team} me={me} roles={props.roles} members={members} />}
       </div>
     </>
-  );
-}
-
-// ---------- status board: tasks × members ----------
-
-function Board({ team, members, tasks, assigned, tz, me, onRoster }: Props & { onRoster: () => void }) {
-  const [now] = useState(() => Date.now());
-  const [pending, start] = useTransition();
-  const others = members.filter((m) => !m.isAdmin);
-  if (others.length === 0 && has(me, "members")) return <EmptyState pose="idle" title="Invite your teammates first" body="Add their emails or share the join link, then you can start assigning tasks." action={<button type="button" onClick={onRoster} className={btnPrimary}>Invite members</button>} />;
-  if (tasks.length === 0) return <EmptyState title="No team tasks yet" body={has(me, "tasks") ? "Make a task, pick who does it and add the steps under “How to do it”. They get it by email." : "When a task is assigned to you it shows up here."} action={has(me, "tasks") ? <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button> : undefined} />;
-  const mine = tasks.filter((t) => assigned.some((a) => a.taskId === t.id && a.memberId === me.memberId));
-
-  const state = (t: Task, m: Member): "done" | "overdue" | "pending" | null => {
-    const a = assigned.find((x) => x.taskId === t.id && x.memberId === m.id);
-    if (!a) return null;
-    if (a.doneAt) return "done";
-    return t.dueAt && new Date(t.dueAt).getTime() < now ? "overdue" : "pending";
-  };
-  const pct = (m: Member) => {
-    const mine = tasks.map((t) => state(t, m)).filter(Boolean);
-    return mine.length ? Math.round((100 * mine.filter((s) => s === "done").length) / mine.length) : null;
-  };
-  const LABEL = { done: "Done", overdue: "Overdue", pending: "Pending" } as const;
-  const chip = (s: NonNullable<ReturnType<typeof state>>) => (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${s === "done" ? "bg-success/15 text-success" : s === "overdue" ? "bg-danger/15 text-danger" : "bg-raised text-muted"}`}>
-      <span aria-hidden>{s === "done" ? "✓" : s === "overdue" ? "!" : "○"}</span>{LABEL[s]}
-    </span>
-  );
-
-  return (
-    <>
-      {mine.length > 0 && <MyTasks tasks={mine} assigned={assigned} me={me} tz={tz} importanceColors={team.importanceColors} />}
-      {/* wide screens: grid of tasks × members */}
-      <div className="hidden overflow-x-auto rounded-[var(--radius)] border border-line md:block">
-        <table className="w-full border-collapse text-left">
-          <caption className="sr-only">Status of every task for every member</caption>
-          <thead className="bg-surface">
-            <tr>
-              <th scope="col" className="min-w-56 p-3 font-semibold">Task</th>
-              {members.map((m) => (
-                <th key={m.id} scope="col" className="min-w-32 p-3 align-bottom font-medium">
-                  <span className="flex items-center gap-2"><MemberAvatar m={m} color={team.color} size={28} />{nameOf(m)}</span>
-                  <span className="mt-1 block text-sm font-normal text-muted">{pct(m) === null ? "No tasks" : `${pct(m)}% done`}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((t) => (
-              <tr key={t.id} className="border-t border-line">
-                <th scope="row" className="p-3 font-medium">
-                  <Link href={`/tasks/${t.id}`} className="hover:underline">{t.title || "Untitled task"}</Link>
-                  {t.importance > 0 && <ImportanceTag level={t.importance} colors={team.importanceColors} className="ml-2 align-middle" />}
-                  {t.dueAt && <span className="block text-sm font-normal text-muted">Due {formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}
-                </th>
-                {members.map((m) => {
-                  const s = state(t, m);
-                  return <td key={m.id} className="p-3">{s ? chip(s) : <span className="text-muted" aria-label="Not assigned">–</span>}</td>;
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* phones: one card per task, assignees stacked */}
-      <ul className="grid gap-3 md:hidden">
-        {tasks.map((t) => (
-          <li key={t.id} className="rounded-[var(--radius)] border border-line bg-surface p-4">
-            <div className="flex flex-wrap items-center gap-2"><Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title || "Untitled task"}</Link><ImportanceTag level={t.importance} colors={team.importanceColors} /></div>
-            {t.dueAt && <p className="text-sm text-muted">Due {formatDue(new Date(t.dueAt), t.hasTime, tz)}</p>}
-            <ul className="mt-3 grid gap-2">
-              {members.filter((m) => state(t, m)).map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3"><span>{nameOf(m)}</span>{chip(state(t, m)!)}</li>
-              ))}
-              {!members.some((m) => state(t, m)) && <li className="text-sm text-muted">Nobody assigned yet.</li>}
-            </ul>
-          </li>
-        ))}
-      </ul>
-      <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-2 md:hidden">
-        {members.map((m) => <div key={m.id} className="text-sm"><dt className="inline">{nameOf(m)}: </dt><dd className="inline text-muted">{pct(m) === null ? "no tasks" : `${pct(m)}% done`}</dd></div>)}
-      </dl>
-    </>
-  );
-}
-
-/** Your own part of team tasks: tick it here or with the email's Mark done link. */
-function MyTasks({ tasks, assigned, me, tz, importanceColors }: { tasks: Task[]; assigned: Assigned[]; me: MeT; tz: string; importanceColors: Record<string, string> | null }) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
-  return (
-    <section aria-labelledby="mine-h" className="mb-6 rounded-[var(--radius)] border border-line bg-surface p-4">
-      <h2 id="mine-h" className="font-display font-semibold">Your tasks in this team</h2>
-      <ul className="mt-2 grid gap-1">
-        {tasks.map((t) => {
-          const done = Boolean(assigned.find((a) => a.taskId === t.id && a.memberId === me.memberId)?.doneAt);
-          return (
-            <li key={t.id} className="flex items-center gap-1">
-              <HexCheck checked={done} label={`Mark my part of “${t.title}” done`} onChange={(v) => start(async () => { await markMyPart(t.id, v); router.refresh(); })} />
-              <Link href={`/tasks/${t.id}`} className={`min-h-11 flex-1 py-2 hover:underline ${done ? "text-muted line-through" : ""}`}>{t.title || "Untitled task"}</Link>
-              <ImportanceTag level={t.importance} colors={importanceColors} />
-              {t.dueAt && <span className="text-sm whitespace-nowrap text-muted">{formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}
-              {pending && <span className="sr-only">Saving…</span>}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
 

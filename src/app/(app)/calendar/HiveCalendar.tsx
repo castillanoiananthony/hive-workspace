@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/app/EmptyState";
 import { utcToZoned } from "@/lib/dates";
 import { rescheduleTask } from "./actions";
 
-export type CalTask = { id: string; title: string; done: boolean; date: string; time: string | null; space: string; spaceName: string; color: string | null };
+export type CalTask = { id: string; title: string; done: boolean; date: string; time: string | null; space: string; spaceName: string; color: string | null; tint?: string | null }; // tint: the importance colour
 
 const VIEWS = [
   { id: "dayGridMonth", label: "Month" },
@@ -48,8 +48,9 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
     .filter((t) => !hidden.has(t.space))
     .map((t) => ({
       id: t.id, title: t.title, allDay: !t.time, start: t.time ? `${t.date}T${t.time}:00` : t.date,
-      backgroundColor: t.color ?? "var(--accent)", borderColor: t.color ?? "var(--accent-edge)",
-      textColor: "var(--on-accent)", classNames: t.done ? ["is-done"] : [],
+      color: t.tint ?? t.color ?? "var(--accent)", contrastColor: readableOn(t.tint ?? t.color),
+      backgroundColor: t.tint ?? t.color ?? "var(--accent)", borderColor: t.tint ?? t.color ?? "var(--accent-edge)",
+      textColor: readableOn(t.tint ?? t.color), classNames: t.done ? ["is-done"] : [],
     }));
 
   function onDrop(info: EventDropInfo) {
@@ -138,6 +139,13 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
               eventClick={(info) => { info.jsEvent.preventDefault(); router.push(`/tasks/${info.event.id}`); }}
               datesSet={(info) => { setTitle(info.view.title); setView(info.view.type); }}
               noEventsContent="No tasks due in this period."
+              eventContent={(arg) => arg.view.type === "dayGridMonth"
+                // month view: the task fills the day square, title wraps instead of being cut off
+                ? <div style={{ background: arg.color || undefined, color: arg.contrastColor || undefined }} className="flex min-h-[4.5rem] w-full flex-col justify-start gap-0.5 overflow-hidden rounded-[6px] px-2 py-1.5 text-sm leading-snug font-semibold whitespace-normal sm:min-h-[5.5rem]">
+                    {arg.timeText && <span className="text-xs font-medium opacity-80">{arg.timeText}</span>}
+                    <span className="line-clamp-4 break-words">{arg.event.title}</span>
+                  </div>
+                : undefined}
             />
           </div>
           <p className="mt-3 text-sm text-muted">On a phone, press and hold a task to drag it, or open it and change the due date.</p>
@@ -145,4 +153,12 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
       )}
     </>
   );
+}
+
+/** Dark or white text, whichever reads better on a #rrggbb fill (CSS variables keep the theme's on-accent). */
+function readableOn(bg: string | null | undefined) {
+  if (!bg || !/^#[0-9a-f]{6}$/i.test(bg)) return "var(--on-accent)";
+  const [r, g, b] = [1, 3, 5].map((i) => { const c = parseInt(bg.slice(i, i + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (L + 0.05) / 0.05 >= 1.05 / (L + 0.05) ? "#17171a" : "#ffffff";
 }
