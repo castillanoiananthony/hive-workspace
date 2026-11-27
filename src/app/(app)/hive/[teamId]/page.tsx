@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BackButton } from "@/components/app/BackButton";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { db } from "@/db";
-import { assignment, combPost, progressLog, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
+import { assignment, combPost, contribution, progressLog, subtask, taskLink, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
 import { ALL_PERMS, can } from "@/lib/hive-perms";
 import { requireUser } from "@/lib/session";
 import { lastDays } from "@/lib/activity";
@@ -55,6 +55,12 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
   ]);
   const avatarOf = (userId: string | null) => { const a = avatars.find((x) => x.userId === userId); return a ? `/api/profile-image/${userId}/avatar?v=${a.updatedAt.getTime()}` : null; };
 
+  const [subCounts, linkCounts, contributions, [mySubs]] = await Promise.all([
+    taskIds.length ? db.select({ taskId: subtask.taskId, total: count(), done: sql<number>`count(${subtask.doneAt})::int` }).from(subtask).where(inArray(subtask.taskId, taskIds)).groupBy(subtask.taskId) : Promise.resolve([]),
+    taskIds.length ? db.select({ taskId: taskLink.taskId, n: count() }).from(taskLink).where(inArray(taskLink.taskId, taskIds)).groupBy(taskLink.taskId) : Promise.resolve([]),
+    db.select().from(contribution).where(eq(contribution.teamId, teamId)).orderBy(desc(contribution.createdAt)).limit(500),
+    taskIds.length ? db.select({ n: count() }).from(subtask).where(and(inArray(subtask.taskId, taskIds), eq(subtask.ownerId, mine.id))) : Promise.resolve([{ n: 0 }]),
+  ]);
   const logs = await db.select({ id: progressLog.id, taskId: assignment.taskId, memberId: assignment.memberId, progress: progressLog.progress, done: progressLog.done, note: progressLog.note, at: progressLog.createdAt })
     .from(progressLog).innerJoin(assignment, eq(progressLog.assignmentId, assignment.id))
     .where(eq(progressLog.teamId, teamId)).orderBy(desc(progressLog.createdAt)).limit(300);
@@ -63,19 +69,20 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
   return (
     <TeamView
       days={days}
+      contributions={contributions.map((c) => ({ id: c.id, memberId: c.memberId, kind: c.kind, what: c.what, at: c.createdAt.toISOString() }))}
       logs={logs.map((l) => ({ ...l, at: l.at.toISOString() }))}
       calendar={tasks.filter((x) => x.dueAt).map((x) => { const z = utcToZoned(x.dueAt!, me.timezone); return { id: x.id, title: x.title || "Untitled task", done: x.status === "done", date: z.date, time: x.hasTime ? z.time : null, space: t.id, spaceName: t.name, color: t.color, tint: importanceOf(x.importance, t.importanceColors)?.color ?? null }; })}
       tz={me.timezone}
-      me={{ memberId: mine.id, isAdmin: mine.isAdmin, perms: mine.isAdmin ? ALL_PERMS : mine.perms }}
+      me={{ memberId: mine.id, isAdmin: mine.isAdmin, perms: mine.isAdmin ? ALL_PERMS : mine.perms, access: mine.access, subtasks: Number(mySubs?.n ?? 0) }}
       team={{ id: t.id, name: t.name, color: t.color, digestEnabled: t.digestEnabled, digestDay: t.digestDay, joinCode: can(mine, "members") ? t.joinCode : null, importanceColors: t.importanceColors ?? null, app: process.env.APP_URL ?? "http://localhost:3000" }}
       members={members.map((m) => ({
         id: m.id, userId: m.userId, name: m.name, nickname: m.nickname, email: can(mine, "members") || m.id === mine.id ? m.email : null,
         joined: Boolean(m.userId), isAdmin: m.isAdmin, roleId: m.roleId, perms: m.isAdmin ? ALL_PERMS : m.perms, parentId: m.parentId, position: m.position,
-        avatar: avatarOf(m.userId), unsubscribed: Boolean(m.unsubscribedAt),
+        avatar: avatarOf(m.userId), unsubscribed: Boolean(m.unsubscribedAt), access: m.access,
       }))}
       links={links.map((l) => ({ id: l.id, title: l.title, url: l.url, note: l.note, memberId: l.memberId, at: l.createdAt.toISOString() }))}
       roles={roles.map((r) => ({ id: r.id, name: r.name, perms: r.perms, isLeader: r.isLeader }))}
-      tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime, importance: x.importance }))}
+      tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime, importance: x.importance, subtasks: { total: Number(subCounts.find((c) => c.taskId === x.id)?.total ?? 0), done: Number(subCounts.find((c) => c.taskId === x.id)?.done ?? 0) }, links: Number(linkCounts.find((c) => c.taskId === x.id)?.n ?? 0) }))}
       assigned={assigned.map((a) => ({ ...a, doneAt: a.doneAt?.toISOString() ?? null }))}
       stream={[
         ...posts.map((p) => ({ kind: "post" as const, id: p.id, at: p.createdAt.toISOString(), memberId: p.memberId, body: p.body, hidden: Boolean(p.hiddenAt) })),

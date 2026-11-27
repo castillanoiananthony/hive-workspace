@@ -1,8 +1,8 @@
 export type TeamT = { id: string; name: string; color: string; digestEnabled: boolean; digestDay: number; joinCode: string | null; app: string; importanceColors: Record<string, string> | null };
-export type MemberT = { id: string; userId: string | null; name: string; nickname: string | null; email: string | null; joined: boolean; isAdmin: boolean; roleId: string | null; perms: string[]; parentId: string | null; position: number; avatar: string | null; unsubscribed: boolean };
+export type MemberT = { id: string; userId: string | null; name: string; nickname: string | null; email: string | null; joined: boolean; isAdmin: boolean; roleId: string | null; perms: string[]; parentId: string | null; position: number; avatar: string | null; unsubscribed: boolean; access?: string };
 export type RoleT = { id: string; name: string; perms: string[]; isLeader: boolean };
-export type MeT = { memberId: string; isAdmin: boolean; perms: string[] };
-export type TaskT = { id: string; title: string; status: "todo" | "doing" | "done"; dueAt: string | null; hasTime: boolean; importance: number };
+export type MeT = { memberId: string; isAdmin: boolean; perms: string[]; access?: string; subtasks?: number };
+export type TaskT = { id: string; title: string; status: "todo" | "doing" | "review" | "done"; dueAt: string | null; hasTime: boolean; importance: number; subtasks?: { done: number; total: number }; links?: number };
 export type AssignedT = { taskId: string; memberId: string; doneAt: string | null; progress: number };
 export type LogT = { id: string; taskId: string; memberId: string; progress: number; done: boolean; note: string | null; at: string };
 export type StreamT =
@@ -11,4 +11,5 @@ export type StreamT =
   | { kind: "task"; id: string; at: string; memberId: null; taskId: string };
 
 export const nameOf = (m: { nickname: string | null; name: string }) => m.nickname?.trim() || m.name;
-export const has = (me: MeT, perm: string) => me.isAdmin || me.perms.includes(perm);
+export const has = (me: MeT, perm: string) => me.isAdmin || ((me.access ?? "member") === "member" && me.perms.includes(perm));
+export type ContributionT = { id: string; memberId: string | null; kind: string; what: string; at: string };

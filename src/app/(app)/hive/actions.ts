@@ -8,6 +8,8 @@ import { assignment, checklistItem, combPost, progressLog, task, taskLink, team,
 import { sendInvites, sendPendingAssignments } from "@/lib/buzz";
 import { ALL_PERMS, DEFAULT_PERMS, type Perm } from "@/lib/hive-perms";
 import { cleanImportanceColors } from "@/lib/importance";
+import { recordContribution } from "@/lib/contributions";
+import { syncTaskStatus } from "@/lib/task-status";
 import { parseRoster } from "@/lib/roster";
 import { requireUser } from "@/lib/session";
 import { createTeamTask } from "@/lib/team-tasks";
@@ -262,17 +264,12 @@ export async function markMyPart(taskId: string, done: boolean) {
   const [a] = await db.select().from(assignment).where(and(eq(assignment.taskId, taskId), eq(assignment.memberId, member.id)));
   if (!a) throw new Error("This task isn't assigned to you.");
   await db.update(assignment).set({ doneAt: done ? a.doneAt ?? new Date() : null, progress: done ? 100 : Math.min(a.progress, 99) }).where(eq(assignment.id, a.id));
+  if (done && !a.doneAt) { const [x] = await db.select({ title: task.title }).from(task).where(eq(task.id, taskId)); await recordContribution({ teamId: t.teamId!, memberId: member.id, kind: "part_done", what: x?.title ?? "", taskId }); }
   await syncTaskStatus(taskId);
   refresh(t.teamId!);
   revalidatePath(`/tasks/${taskId}`);
 }
 
-/** Done when every part is done; in progress once anyone has moved their slider. */
-async function syncTaskStatus(taskId: string) {
-  const parts = await db.select({ doneAt: assignment.doneAt, progress: assignment.progress }).from(assignment).where(eq(assignment.taskId, taskId));
-  const status = parts.length && parts.every((p) => p.doneAt) ? "done" : parts.some((p) => p.doneAt || p.progress > 0) ? "doing" : "todo";
-  await db.update(task).set({ status }).where(eq(task.id, taskId));
-}
 
 /** Your own part of a team task: move the slider, write what you did, or say it's done (or not). Every save is logged with its date. */
 export async function logProgress(taskId: string, input: { progress: number; note?: string; done: boolean }) {
@@ -288,6 +285,7 @@ export async function logProgress(taskId: string, input: { progress: number; not
     await tx.update(assignment).set({ progress, doneAt: done ? a.doneAt ?? new Date() : null }).where(eq(assignment.id, a.id));
     await tx.insert(progressLog).values({ assignmentId: a.id, teamId: t.teamId!, progress, done, note });
   });
+  if (done && !a.doneAt) { const [x] = await db.select({ title: task.title }).from(task).where(eq(task.id, taskId)); await recordContribution({ teamId: t.teamId!, memberId: member.id, kind: "part_done", what: x?.title ?? "", taskId }); }
   await syncTaskStatus(taskId);
   refresh(t.teamId!);
   revalidatePath(`/tasks/${taskId}`);

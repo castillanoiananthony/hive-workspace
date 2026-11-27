@@ -15,7 +15,7 @@ import { Vault, type VaultLink } from "./Vault";
 import { Board } from "./TeamTasks";
 import { Activity, type DayT } from "./Activity";
 import { HiveCalendar, type CalTask } from "../../calendar/HiveCalendar";
-import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT } from "./types";
+import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT, type ContributionT } from "./types";
 
 type Team = TeamT;
 type Member = MemberT;
@@ -23,7 +23,7 @@ type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[] };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[] };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
@@ -37,7 +37,7 @@ const field = "min-h-11 rounded-[var(--radius)] border border-line bg-bg px-3 te
 
 export function TeamView(props: Props) {
   const { team, members, tasks, me } = props;
-  const tabs = TABS.filter((t) => !t.need || has(me, t.need) || (t.id === "settings" && me.isAdmin));
+  const tabs = TABS.filter((t) => (me.access === "guest" ? ["comb", "board"].includes(t.id) : !t.need || has(me, t.need) || (t.id === "settings" && me.isAdmin)));
   const [tab, setTab] = useState("comb");
   const [pending, start] = useTransition();
   const open = tasks.filter((t) => t.status !== "done").length;
@@ -55,7 +55,7 @@ export function TeamView(props: Props) {
         {has(me, "tasks") && <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button>}
       </div>
 
-      <div role="tablist" aria-label="Team sections" className="mt-8 -mx-1 flex gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 [scrollbar-width:none]">
+      <div role="tablist" aria-label="Team sections" className="relative mt-8 -mx-1 flex gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 [scrollbar-width:none]">
         {tabs.map((t) => (
           <button key={t.id} type="button" role="tab" id={`tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`panel-${t.id}`} onClick={() => setTab(t.id)}
             className="min-h-10 shrink-0 rounded-full px-4 font-medium whitespace-nowrap text-muted hover:text-ink aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-on-accent aria-selected:shadow-[0_6px_18px_-8px_var(--accent)]">{t.label}</button>
@@ -65,7 +65,7 @@ export function TeamView(props: Props) {
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
         {tab === "board" && <Board {...props} onRoster={() => setTab("members")} />}
         {tab === "calendar" && (props.calendar.length ? <HiveCalendar tasks={props.calendar} tz={props.tz} editable={has(me, "tasks")} embedded /> : <p className="rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">No team tasks have a due date yet. Give one a date and it shows up here.</p>)}
-        {tab === "activity" && <Activity team={team} tasks={tasks} assigned={props.assigned} members={members} days={props.days} logs={props.logs} tz={props.tz} />}
+        {tab === "activity" && <Activity team={team} tasks={tasks} assigned={props.assigned} members={members} days={props.days} logs={props.logs} tz={props.tz} contributions={props.contributions} />}
         {tab === "vault" && <Vault team={team} links={props.links} members={members} me={me} />}
         {tab === "hierarchy" && <Hierarchy team={team} members={members} roles={props.roles} me={me} />}
         {tab === "members" && <Members team={team} members={members} roles={props.roles} me={me} />}
@@ -157,7 +157,7 @@ function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
   if (log.length === 0) return <EmptyState pose="fly" title="No emails yet" body="Every Buzz email this team sends shows up here: who got it, what it was, when, and whether it went through." />;
   const when = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
   return (
-    <div className="overflow-x-auto rounded-[var(--radius)] border border-line">
+    <div className="relative overflow-x-auto rounded-[var(--radius)] border border-line">
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">Emails sent to this team, newest first</caption>
         <thead className="bg-surface text-sm text-muted"><tr><th scope="col" className="p-3 font-medium">When</th><th scope="col" className="p-3 font-medium">To</th><th scope="col" className="p-3 font-medium">Email</th><th scope="col" className="p-3 font-medium">Status</th></tr></thead>

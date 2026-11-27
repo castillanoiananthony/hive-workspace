@@ -14,7 +14,7 @@ import { Bee } from "@/components/brand/Bee";
 import { GoalDialog, type GoalDialogMode } from "./GoalDialog";
 
 export type GoalView = { id: string; title: string; level: "year" | "month" | "week"; parentId: string | null; period: string; manualProgress: number; done: boolean; progress: number };
-export type TaskView = { id: string; title: string; status: "todo" | "doing" | "done"; goalId: string | null; dueAt: string | null; hasTime: boolean; importance: number };
+export type TaskView = { id: string; title: string; status: "todo" | "doing" | "review" | "done"; goalId: string | null; dueAt: string | null; hasTime: boolean; importance: number };
 
 const LEVEL = { year: "Year goal", month: "Month goal", week: "Week goal" } as const;
 

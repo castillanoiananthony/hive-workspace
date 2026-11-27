@@ -8,17 +8,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/app/BackButton";
 import { HexCheck } from "@/components/app/HexCheck";
+import { TaskExtras, type Extras } from "./TaskExtras";
 import { deleteTask, saveTask, type TaskDoc } from "../../cell/actions";
 import { saveAsTemplate, sendAssignmentEmails } from "../../hive/actions";
 
 type Save = "saved" | "saving" | "unsaved" | "error";
-const STATUS: { id: TaskDoc["status"]; label: string }[] = [
-  { id: "todo", label: "To do" }, { id: "doing", label: "In progress" }, { id: "done", label: "Done" },
+const STATUS: { id: TaskDoc["status"]; label: string; team?: boolean }[] = [
+  { id: "todo", label: "To do" }, { id: "doing", label: "In progress" }, { id: "review", label: "Needs review", team: true }, { id: "done", label: "Done" },
 ];
 
-type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; members: { id: string; name: string }[]; done: string[]; notified: string[] };
+type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; canApprove: boolean; members: { id: string; name: string }[]; done: string[]; notified: string[] };
 
-export function TaskEditor({ id, initial, goals, team }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null }) {
+export function TaskEditor({ id, initial, goals, team, extras }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null }) {
   const router = useRouter();
   const [doc, setDoc] = useState<TaskDoc>(initial);
   const [save, setSave] = useState<Save>("saved");
@@ -153,9 +154,10 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
         <dt className="self-center text-sm text-muted">Status</dt>
         <dd>
           <div role="radiogroup" aria-label="Status" className="flex flex-wrap gap-2">
-            {STATUS.map((s) => (
+            {STATUS.filter((s) => !s.team || team).map((s) => (
               <button key={s.id} type="button" role="radio" aria-checked={doc.status === s.id} onClick={() => update({ status: s.id })}
-                className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium aria-checked:border-accent-edge aria-checked:bg-raised">{s.label}</button>
+                disabled={Boolean(team && !team.canApprove && (s.id === "done") !== (doc.status === "done"))} title={team && !team.canApprove && s.id === "done" ? "Only the Leader, or someone who can approve work, can mark this Done" : undefined}
+                className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium aria-checked:border-accent-edge aria-checked:bg-raised disabled:opacity-40">{s.label}</button>
             ))}
           </div>
         </dd>
@@ -275,6 +277,8 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
         <button type="button" onClick={() => update({ links: [...doc.links, { title: "", url: "" }] })} className="mt-2 min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">Add a link</button>
         {note && <p role="status" className="mt-2 text-sm text-danger">{note}</p>}
       </section>
+
+      {extras && <TaskExtras {...extras} />}
 
       <div className="mt-12 border-t border-line pt-6">
         <div className="flex flex-wrap items-center gap-3">

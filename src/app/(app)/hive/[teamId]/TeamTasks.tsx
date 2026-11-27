@@ -6,6 +6,7 @@ import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { formatDue } from "@/lib/dates";
 import { importanceOf } from "@/lib/importance";
 import { newTeamTask } from "../actions";
+import { Kanban } from "./Kanban";
 import { MemberAvatar } from "./MemberAvatar";
 import { Bar, fmtDay, pctOf } from "./MyProgress";
 import { has, nameOf, type AssignedT, type LogT, type MeT, type MemberT, type TaskT, type TeamT } from "./types";
@@ -17,6 +18,7 @@ const Chevron = () => <svg viewBox="0 0 24 24" width="18" height="18" aria-hidde
 export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster }: { team: TeamT; members: MemberT[]; tasks: TaskT[]; assigned: AssignedT[]; logs: LogT[]; tz: string; me: MeT; onRoster: () => void }) {
   const [now] = useState(() => Date.now());
   const [pending, start] = useTransition();
+  const [view, setView] = useState<"list" | "board">("list");
   const others = members.filter((m) => !m.isAdmin);
   if (others.length === 0 && has(me, "members")) return <EmptyState pose="idle" title="Invite your teammates first" body="Add their emails or share the join link, then you can start assigning tasks." action={<button type="button" onClick={onRoster} className={btnPrimary}>Invite members</button>} />;
   if (tasks.length === 0) return <EmptyState title="No team tasks yet" body={has(me, "tasks") ? "Make a task, pick who does it and add the steps under “How to do it”. They get it by email." : "When a task is assigned to you it shows up here."} action={has(me, "tasks") ? <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button> : undefined} />;
@@ -26,9 +28,9 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster }
   const people = members.map((m) => ({ m, pct: avg(assigned.filter((a) => a.memberId === m.id)) })).filter((p) => p.pct !== null);
 
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       {people.length > 0 && (
-        <ul aria-label="Everyone's progress" className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        <ul aria-label="Everyone's progress" className="relative flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
           {people.map(({ m, pct }) => (
             <li key={m.id} className="flex min-w-48 items-center gap-3 rounded-[calc(var(--radius)*2)] border border-line bg-surface px-4 py-3">
               <MemberAvatar m={m} color={team.color} size={36} />
@@ -38,19 +40,28 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster }
         </ul>
       )}
 
-      {mine.length > 0 && (
+      {(mine.length > 0 || (me.subtasks ?? 0) > 0) && (
         <Link href={`/hive/${team.id}/progress`} className="group flex items-center gap-4 rounded-[calc(var(--radius)*2)] border border-accent-edge/60 bg-surface px-5 py-4 hover:bg-raised">
-          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent/15 font-display font-semibold text-accent-text tabular-nums">{avg(assigned.filter((a) => a.memberId === me.memberId))}%</span>
+          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent/15 font-display font-semibold text-accent-text tabular-nums">{avg(assigned.filter((a) => a.memberId === me.memberId)) ?? 0}%</span>
           <span className="min-w-0 flex-1">
             <span className="block font-display text-lg font-semibold">Your progress</span>
-            <span className="block text-sm text-muted">{mine.length} {mine.length === 1 ? "task" : "tasks"} assigned to you. Update your progress and logs.</span>
+            <span className="block text-sm text-muted">{mine.length} {mine.length === 1 ? "task" : "tasks"}{me.subtasks ? ` and ${me.subtasks} ${me.subtasks === 1 ? "subtask" : "subtasks"}` : ""} assigned to you. Update your progress and logs.</span>
           </span>
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
         </Link>
       )}
 
-      <section aria-labelledby="all-h" className="grid gap-3">
-        <h2 id="all-h" className="font-display text-lg font-semibold">All team tasks</h2>
+      <section aria-labelledby="all-h" className="grid grid-cols-[minmax(0,1fr)] gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="all-h" className="font-display text-lg font-semibold">All team tasks</h2>
+          <div role="radiogroup" aria-label="View" className="flex rounded-full border border-line bg-surface p-1">
+            {(["list", "board"] as const).map((v) => (
+              <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => setView(v)}
+                className="min-h-9 rounded-full px-4 text-sm font-medium text-muted aria-checked:bg-accent aria-checked:font-semibold aria-checked:text-on-accent">{v === "list" ? "List" : "Board"}</button>
+            ))}
+          </div>
+        </div>
+        {view === "board" ? <Kanban team={team} tasks={tasks} members={members} assigned={assigned} me={me} tz={tz} /> : <>
         {tasks.map((t) => {
           const parts = assigned.filter((a) => a.taskId === t.id);
           const overall = avg(parts);
@@ -92,6 +103,7 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster }
             </details>
           );
         })}
+        </>}
       </section>
     </div>
   );

@@ -5,6 +5,7 @@ export const PERMS = [
   { key: "vault", label: "Add to the Hive Vault", hint: "Share Drive folders, GitHub repos and other links, and tidy them up" },
   { key: "nicknames", label: "Edit nicknames", hint: "Change anyone's nickname in this team" },
   { key: "tasks", label: "Create & assign tasks", hint: "Make team tasks, choose who does them, edit them" },
+  { key: "approve", label: "Approve work", hint: "Move tasks from Needs Review to Done" },
   { key: "members", label: "Manage members", hint: "Invite people, share the join link, remove members" },
   { key: "hierarchy", label: "Edit hierarchy", hint: "Move people around in the team chart" },
   { key: "templates", label: "Manage templates", hint: "Save, reuse and schedule repeating tasks" },
@@ -23,8 +24,12 @@ export const ROLE_PRESETS = [
   { id: "project", label: "Project", roles: ["Project lead", "Developer", "Designer"] },
   { id: "none", label: "Leader only", roles: ["Leader"] },
 ] as const;
-export const SECOND_PERMS: Perm[] = ["post", "hide", "vault", "nicknames", "tasks", "members", "hierarchy", "templates", "log"];
+export const SECOND_PERMS: Perm[] = ["post", "hide", "vault", "approve", "nicknames", "tasks", "members", "hierarchy", "templates", "log"];
 export const OTHER_PERMS: Perm[] = ["post", "vault", "tasks", "templates"];
 export const presetPerms = (i: number): Perm[] => (i === 0 ? ALL_PERMS : i === 1 ? SECOND_PERMS : OTHER_PERMS);
 
-export const can = (who: { isAdmin: boolean; perms: string[] } | null | undefined, perm: Perm) => Boolean(who && (who.isAdmin || who.perms.includes(perm)));
+export type AccessLevel = "member" | "adviser" | "guest";
+/** Advisers and guests never hold powers, whatever their perms column says. */
+export const can = (who: { isAdmin: boolean; perms: string[]; access?: string } | null | undefined, perm: Perm) =>
+  Boolean(who && (who.isAdmin || ((who.access ?? "member") === "member" && who.perms.includes(perm))));
+export const canComment = (who: { access?: string } | null | undefined) => Boolean(who && who.access !== "guest");

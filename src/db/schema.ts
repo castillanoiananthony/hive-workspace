@@ -73,7 +73,7 @@ export const verification = pgTable("verification", {
 
 // ---- My Cell ----
 export const goalLevel = pgEnum("goal_level", ["year", "month", "week"]);
-export const taskStatus = pgEnum("task_status", ["todo", "doing", "done"]);
+export const taskStatus = pgEnum("task_status", ["todo", "doing", "review", "done"]); // review: waiting for the leader to approve
 
 export const goal = pgTable("goal", {
   id: id(),
@@ -154,6 +154,7 @@ export const teamMember = pgTable("team_member", {
   isAdmin: boolean("is_admin").notNull().default(false), // the leader: top of the hierarchy, every power
   parentId: text("parent_id").references((): AnyPgColumn => teamMember.id, { onDelete: "set null" }), // who they sit under
   position: integer("position").notNull().default(0), // order among people under the same person
+  access: text("access").$type<"member" | "adviser" | "guest">().notNull().default("member"), // adviser: view + comment; guest: view tasks and The Comb
   createdAt: created(),
 }, (t) => [uniqueIndex("member_team_email_uq").on(t.teamId, t.email)]);
 
@@ -260,3 +261,38 @@ export const follow = pgTable("follow", {
   followingId: text("following_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   createdAt: created(),
 }, (t) => [primaryKey({ columns: [t.followerId, t.followingId] }), index("follow_following_idx").on(t.followingId)]);
+
+// A slice of a team task with exactly one owner and its own due date.
+export const subtask = pgTable("subtask", {
+  id: id(),
+  taskId: text("task_id").notNull().references(() => task.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  ownerId: text("owner_id").references(() => teamMember.id, { onDelete: "set null" }),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  hasTime: boolean("has_time").notNull().default(false),
+  status: taskStatus("status").notNull().default("todo"),
+  doneAt: timestamp("done_at", { withTimezone: true }),
+  position: integer("position").notNull().default(0),
+  createdAt: created(),
+}, (t) => [index("subtask_task_idx").on(t.taskId), index("subtask_owner_idx").on(t.ownerId)]);
+
+// Who finished what, and when: written automatically, never edited. Read by the contribution log and its CSV.
+export const contribution = pgTable("contribution", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  taskId: text("task_id").references(() => task.id, { onDelete: "set null" }),
+  subtaskId: text("subtask_id").references(() => subtask.id, { onDelete: "set null" }),
+  memberId: text("member_id").references(() => teamMember.id, { onDelete: "set null" }),
+  kind: text("kind").$type<"part_done" | "subtask_done" | "sent_for_review" | "approved">().notNull(),
+  what: text("what").notNull(), // the task / subtask title at the time, so the record survives renames and deletes
+  createdAt: created(),
+}, (t) => [index("contribution_team_idx").on(t.teamId, t.createdAt), index("contribution_member_idx").on(t.memberId)]);
+
+// Comments on a team task (members and advisers; guests only read).
+export const taskComment = pgTable("task_comment", {
+  id: id(),
+  taskId: text("task_id").notNull().references(() => task.id, { onDelete: "cascade" }),
+  memberId: text("member_id").references(() => teamMember.id, { onDelete: "set null" }),
+  body: text("body").notNull(),
+  createdAt: created(),
+}, (t) => [index("task_comment_task_idx").on(t.taskId, t.createdAt)]);

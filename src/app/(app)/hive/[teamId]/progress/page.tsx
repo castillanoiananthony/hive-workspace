@@ -6,10 +6,12 @@ import { BackButton } from "@/components/app/BackButton";
 import { HexBadge } from "@/components/app/HexBadge";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { db } from "@/db";
-import { assignment, progressLog, task } from "@/db/schema";
+import { assignment, progressLog, subtask, task } from "@/db/schema";
+import { formatDue, isPast } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import { teamAccess } from "@/lib/teams";
 import { MyTask } from "../MyProgress";
+import { MySubtasks } from "./MySubtasks";
 
 export const metadata: Metadata = { title: "Your progress" };
 
@@ -31,6 +33,8 @@ async function Progress({ params }: { params: PageProps<"/hive/[teamId]/progress
   const rows = await db.select({ a: assignment, t: task }).from(assignment).innerJoin(task, eq(assignment.taskId, task.id))
     .where(and(eq(task.teamId, teamId), eq(assignment.memberId, mine.id))).orderBy(asc(task.dueAt), asc(task.createdAt));
   const logs = rows.length ? await db.select().from(progressLog).where(inArray(progressLog.assignmentId, rows.map((r) => r.a.id))).orderBy(desc(progressLog.createdAt)) : [];
+  const subs = await db.select({ s: subtask, taskTitle: task.title }).from(subtask).innerJoin(task, eq(subtask.taskId, task.id))
+    .where(and(eq(task.teamId, teamId), eq(subtask.ownerId, mine.id))).orderBy(asc(subtask.doneAt), asc(subtask.dueAt));
   const avg = rows.length ? Math.round(rows.reduce((s, r) => s + (r.a.doneAt ? 100 : r.a.progress), 0) / rows.length) : 0;
   return (
     <>
@@ -42,7 +46,14 @@ async function Progress({ params }: { params: PageProps<"/hive/[teamId]/progress
           <p className="text-muted">{t.name}: {rows.length} {rows.length === 1 ? "task" : "tasks"}, {avg}% done overall.</p>
         </div>
       </div>
-      {rows.length === 0 ? (
+      {subs.length > 0 && (
+        <section aria-labelledby="mysub-h" className="mt-8">
+          <h2 id="mysub-h" className="font-display text-xl font-semibold">Your subtasks <span className="font-normal text-muted">({subs.filter((x) => !x.s.doneAt).length} open)</span></h2>
+          <MySubtasks items={subs.map(({ s, taskTitle }) => ({ id: s.id, title: s.title, taskId: s.taskId, taskTitle, due: s.dueAt ? formatDue(s.dueAt, s.hasTime, me.timezone) : null, overdue: isPast(s.dueAt), done: Boolean(s.doneAt) }))} />
+        </section>
+      )}
+      {rows.length > 0 && subs.length > 0 && <h2 className="font-display mt-10 text-xl font-semibold">Your parts of team tasks</h2>}
+      {rows.length === 0 && subs.length > 0 ? null : rows.length === 0 ? (
         <p className="mt-8 rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">Nothing is assigned to you in this team yet.</p>
       ) : (
         <ul className="mt-8 grid gap-3">

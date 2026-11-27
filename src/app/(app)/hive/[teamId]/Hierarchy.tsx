@@ -139,7 +139,7 @@ export function Hierarchy({ team, members, roles, me }: { team: TeamT; members: 
       {/* right: the chart */}
       <section aria-labelledby="chart-h" className="min-w-0 rounded-[var(--radius)] border border-line bg-surface p-4">
         <h2 id="chart-h" className="font-display text-lg font-semibold">Team chart</h2>
-        <div className="mt-4 overflow-x-auto pb-4">
+        <div className="relative mt-4 overflow-x-auto pb-4">
           <div className="org mx-auto w-max min-w-full">
             <Tree parentId={null} members={members} layout={layout} color={team.color} roleName={roleName} />
           </div>

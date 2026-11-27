@@ -2,7 +2,7 @@
 // A goal with no children uses its own "done" toggle or manual 0–100 slider.
 
 export type GoalNode = { id: string; parentId: string | null; manualProgress: number; done: boolean };
-export type TaskNode = { goalId: string | null; status: "todo" | "doing" | "done" };
+export type TaskNode = { goalId: string | null; status: "todo" | "doing" | "review" | "done" };
 
 export function computeProgress(goals: GoalNode[], tasks: TaskNode[]): Map<string, number> {
   const childGoals = new Map<string, GoalNode[]>();

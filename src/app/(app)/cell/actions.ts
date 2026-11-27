@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { assignment, checklistItem, goal, task, taskLink, teamMember } from "@/db/schema";
 import { newToken } from "@/lib/tokens";
-import { requirePerm } from "@/lib/teams";
+import { requirePerm, teamAccess } from "@/lib/teams";
+import { can } from "@/lib/hive-perms";
 import { periodFor, zonedToUtc } from "@/lib/dates";
 import { wouldCycle } from "@/lib/progress";
 import { parseQuickAdd } from "@/lib/quickadd";
@@ -121,7 +122,7 @@ export async function newTask(goalId: string | null = null) {
   redirect(`/tasks/${row.id}`);
 }
 
-export async function setTaskStatus(id: string, status: "todo" | "doing" | "done") {
+export async function setTaskStatus(id: string, status: "todo" | "doing" | "review" | "done") {
   const me = await requireUser();
   const t = await ownTask(me.id, id);
   if (!["todo", "doing", "done"].includes(status)) throw new Error("Unknown status.");
@@ -133,7 +134,7 @@ export async function setTaskStatus(id: string, status: "todo" | "doing" | "done
 export type TaskDoc = {
   title: string;
   notes: unknown;
-  status: "todo" | "doing" | "done";
+  status: "todo" | "doing" | "review" | "done";
   dueDate: string | null; // "2027-03-05" in the user's zone
   dueTime: string | null; // "17:00" or null for all-day
   goalId: string | null;
@@ -158,6 +159,12 @@ export async function saveTask(id: string, doc: TaskDoc) {
   const me = await requireUser();
   const before = await ownTask(me.id, id);
   const parent = before.teamId ? null : await ownGoal(me.id, doc.goalId); // team tasks don't sit in personal goals
+  // team tasks also have "Needs review"; only approvers move a task to or from Done
+  let status: TaskDoc["status"] = (before.teamId ? ["todo", "doing", "review", "done"] : ["todo", "doing", "done"]).includes(doc.status) ? doc.status : "todo";
+  if (before.teamId && (status === "done") !== (before.status === "done")) {
+    const { me: m } = await teamAccess(me.id, before.teamId);
+    if (!can(m, "approve")) status = before.status === "done" ? "done" : "review";
+  }
   const dueAt = doc.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(doc.dueDate) ? zonedToUtc(doc.dueDate, doc.dueTime && /^\d{2}:\d{2}$/.test(doc.dueTime) ? doc.dueTime : null, me.timezone) : null;
   const checklist = doc.checklist.slice(0, 100).map((c, i) => ({ taskId: id, text: text(c.text, 300), done: Boolean(c.done), position: i })).filter((c) => c.text);
   const links = doc.links.slice(0, 50).flatMap((l, i) => {
@@ -166,15 +173,16 @@ export async function saveTask(id: string, doc: TaskDoc) {
   });
   await db.transaction(async (tx) => {
     await tx.update(task).set({
-      title: text(doc.title), notes: doc.notes ?? null, status: ["todo", "doing", "done"].includes(doc.status) ? doc.status : "todo", importance: [1, 2, 3].includes(Number(doc.importance)) ? Number(doc.importance) : 0,
+      title: text(doc.title), notes: doc.notes ?? null, status, importance: [1, 2, 3].includes(Number(doc.importance)) ? Number(doc.importance) : 0,
       dueAt, hasTime: Boolean(dueAt && doc.dueTime), goalId: parent?.id ?? null,
       ...(before.teamId ? { howTo: doc.howTo ?? null } : {}),
     }).where(eq(task.id, id));
     if (before.teamId && doc.assignees) {
       // keep existing assignments (their done state and email links), add new ones, drop removed ones
-      const roster = await tx.select({ id: teamMember.id }).from(teamMember).where(eq(teamMember.teamId, before.teamId));
-      const wanted = new Set(doc.assignees.filter((m) => roster.some((r) => r.id === m)));
+      const roster = await tx.select({ id: teamMember.id, access: teamMember.access }).from(teamMember).where(eq(teamMember.teamId, before.teamId));
       const current = await tx.select({ id: assignment.id, memberId: assignment.memberId }).from(assignment).where(eq(assignment.taskId, id));
+      // advisers and guests can't be given new parts (parts they already had are kept)
+      const wanted = new Set(doc.assignees.filter((m) => roster.some((r) => r.id === m && (r.access === "member" || current.some((c) => c.memberId === m)))));
       const drop = current.filter((a) => !wanted.has(a.memberId)).map((a) => a.id);
       if (drop.length) await tx.delete(assignment).where(inArray(assignment.id, drop));
       const add = [...wanted].filter((m) => !current.some((a) => a.memberId === m));

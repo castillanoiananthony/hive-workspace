@@ -47,3 +47,6 @@ export function periodFor(level: "year" | "month" | "week", at: Date, tz: string
   const week = Math.ceil(((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7);
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
+
+/** True when the moment has already passed (null: no date, so never). */
+export const isPast = (d: Date | null) => Boolean(d && d.getTime() < Date.now());

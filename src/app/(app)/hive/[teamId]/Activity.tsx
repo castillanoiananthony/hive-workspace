@@ -5,14 +5,14 @@ import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { importanceOf } from "@/lib/importance";
 import { MemberAvatar } from "./MemberAvatar";
 import { Bar, fmtDay, pctOf } from "./MyProgress";
-import { nameOf, type AssignedT, type LogT, type MemberT, type TaskT, type TeamT } from "./types";
+import { nameOf, type AssignedT, type ContributionT, type LogT, type MemberT, type TaskT, type TeamT } from "./types";
 
 export type DayT = { date: string; label: string; done: number; created: number; posts: number; updates: number };
 const C = { todo: "var(--viz-1)", doing: "var(--viz-2)", done: "var(--viz-3)" } as const;
 const card = "rounded-[calc(var(--radius)*2)] border border-line bg-surface p-5 sm:p-6";
 
 /** Team activity: where the tasks stand (donut), who has done what (bars), and the last 14 days (lines). */
-export function Activity({ team, tasks, assigned, members, days, logs, tz }: { team: TeamT; tasks: TaskT[]; assigned: AssignedT[]; members: MemberT[]; days: DayT[]; logs: LogT[]; tz: string }) {
+export function Activity({ team, tasks, assigned, members, days, logs, tz, contributions = [] }: { team: TeamT; tasks: TaskT[]; assigned: AssignedT[]; members: MemberT[]; days: DayT[]; logs: LogT[]; tz: string; contributions?: ContributionT[] }) {
   const status = (["todo", "doing", "done"] as const).map((k) => ({ k, n: tasks.filter((t) => t.status === k).length }));
   const people = members.map((m) => {
     const mine = assigned.filter((a) => a.memberId === m.id);
@@ -42,6 +42,7 @@ export function Activity({ team, tasks, assigned, members, days, logs, tz }: { t
         <h2 id="line-h" className="font-display text-lg font-semibold">The last 14 days</h2>
         <Lines days={days} />
       </section>
+      <ContributionLog team={team} members={members} contributions={contributions} tz={tz} />
       <TaskProgress team={team} tasks={tasks} assigned={assigned} members={members} logs={logs} tz={tz} />
       <AllLogs tasks={tasks} members={members} logs={logs} tz={tz} color={team.color} />
     </div>
@@ -150,7 +151,7 @@ function Lines({ days }: { days: DayT[] }) {
       </div>
       <details className="text-sm">
         <summary className="inline-flex min-h-11 cursor-pointer items-center rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Show as a table</summary>
-        <div className="mt-2 overflow-x-auto">
+        <div className="relative mt-2 overflow-x-auto">
           <table className="w-full text-left tabular-nums">
             <thead><tr className="text-muted"><th className="py-1 pr-3 font-medium">Day</th>{series.map((s) => <th key={s.key} className="py-1 pr-3 font-medium">{s.label}</th>)}</tr></thead>
             <tbody>{days.map((d) => <tr key={d.date} className="border-t border-line"><td className="py-1 pr-3">{d.label}</td><td className="py-1 pr-3">{d.done}</td><td className="py-1 pr-3">{d.created}</td><td className="py-1 pr-3">{d.posts}</td><td className="py-1 pr-3">{d.updates}</td></tr>)}</tbody>
@@ -236,6 +237,50 @@ function AllLogs({ tasks, members, logs, tz, color }: { tasks: TaskT[]; members:
       <h2 id="logs-h" className="font-display text-lg font-semibold">All recorded logs <span className="font-normal text-muted">({logs.length})</span></h2>
       <LogList logs={logs.slice(0, n)} members={members} tz={tz} color={color} showTask={title} />
       {logs.length > n && <button type="button" onClick={() => setN((x) => x + 30)} className="mt-4 min-h-11 rounded-[var(--radius)] border border-line px-4 text-sm font-medium hover:border-accent-edge">Show more</button>}
+    </section>
+  );
+}
+
+const KIND: Record<string, string> = { part_done: "finished their part of", subtask_done: "finished the subtask", sent_for_review: "sent for review", approved: "approved as done" };
+
+/** Who completed what, recorded automatically. Full log, per-person filter, CSV and print live on their own page. */
+function ContributionLog({ team, members, contributions, tz }: { team: TeamT; members: MemberT[]; contributions: ContributionT[]; tz: string }) {
+  const [who, setWho] = useState("");
+  const rows = contributions.filter((c) => !who || c.memberId === who);
+  const counts = members.map((m) => ({ m, n: contributions.filter((c) => c.memberId === m.id && c.kind !== "sent_for_review").length })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+  const q = who ? `?member=${who}` : "";
+  return (
+    <section aria-labelledby="contrib-h" className={card}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="contrib-h" className="font-display text-lg font-semibold">Contribution log</h2>
+        <div className="flex flex-wrap gap-2">
+          <a href={`/api/teams/${team.id}/contributions${q}`} className="inline-flex min-h-11 items-center rounded-[var(--radius)] border border-line px-4 text-sm font-medium hover:border-accent-edge">Download CSV</a>
+          <Link href={`/hive/${team.id}/contributions${q}`} className="inline-flex min-h-11 items-center rounded-[var(--radius)] border border-line px-4 text-sm font-medium hover:border-accent-edge">Print / PDF</Link>
+        </div>
+      </div>
+      <p className="mt-1 text-sm text-muted">Recorded automatically whenever someone finishes a part or subtask, sends work for review, or approves it.</p>
+      {counts.length > 0 && (
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {counts.map(({ m, n }) => (
+            <li key={m.id}><button type="button" aria-pressed={who === m.id} onClick={() => setWho(who === m.id ? "" : m.id)}
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line py-1 pr-3 pl-1 text-sm hover:border-accent-edge aria-pressed:border-accent-edge aria-pressed:bg-raised">
+              <MemberAvatar m={m} color={team.color} size={26} />{nameOf(m)} <span className="font-semibold tabular-nums">{n}</span></button></li>
+          ))}
+        </ul>
+      )}
+      {rows.length === 0 ? <p className="mt-4 text-sm text-muted">{contributions.length ? "Nothing from this person yet." : "Nothing recorded yet. Finishing parts and subtasks, and approving work, shows up here."}</p> : (
+        <ol className="mt-4 grid gap-2">
+          {rows.slice(0, 15).map((c) => { const m = members.find((x) => x.id === c.memberId); return (
+            <li key={c.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+              <span className="font-medium">{m ? nameOf(m) : "Former member"}</span>
+              <span className="text-muted">{KIND[c.kind] ?? c.kind}</span>
+              <span className="font-medium">{c.what}</span>
+              <span className="text-muted">{fmtDay(c.at, tz)}</span>
+            </li>
+          ); })}
+        </ol>
+      )}
+      {rows.length > 15 && <Link href={`/hive/${team.id}/contributions${q}`} className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent-text underline underline-offset-4">See all {rows.length}</Link>}
     </section>
   );
 }
