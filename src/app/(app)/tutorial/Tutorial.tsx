@@ -146,7 +146,7 @@ export function Tutorial() {
                   <input type="checkbox" checked={read.includes(c.id)} onChange={() => toggle(c.id)} className="size-5 accent-[var(--accent)]" />
                   I&apos;ve got this
                 </label>
-                {i < CHAPTERS.length - 1 && <a href={`#${CHAPTERS[i + 1].id}`} className="ml-auto min-h-11 content-center text-sm font-medium text-accent-text">Next: {CHAPTERS[i + 1].title} ↓</a>}
+                {i < CHAPTERS.length - 1 && <a href={`#${CHAPTERS[i + 1].id}`} className="ml-auto min-h-11 content-center rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">Next: {CHAPTERS[i + 1].title} ↓</a>}
               </div>
             </li>
           ))}

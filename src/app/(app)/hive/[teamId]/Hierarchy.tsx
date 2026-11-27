@@ -195,7 +195,7 @@ function MemberControls({ m, me, roles, onControl }: { m: MemberT; me: MeT; role
           <input id={`nick-${m.id}`} name="nick" defaultValue={m.nickname ?? ""} maxLength={40} autoFocus placeholder="Nickname" className="min-h-9 w-32 rounded-[var(--radius)] border border-line bg-bg px-2 text-sm" />
           <button className="min-h-9 rounded-[var(--radius)] border border-line px-2">Save</button>
         </form>
-      ) : <button type="button" onClick={() => setNick(true)} className="min-h-9 px-1 text-muted hover:text-ink">{m.nickname ? "Edit nickname" : "Add nickname"}</button>)}
+      ) : <button type="button" onClick={() => setNick(true)} className="min-h-9 rounded-[var(--radius)] border border-line px-2 text-muted hover:border-accent-edge hover:text-ink">{m.nickname ? "Edit nickname" : "Add nickname"}</button>)}
       {me.isAdmin && !m.isAdmin && <button type="button" onClick={onControl} className="min-h-9 rounded-[var(--radius)] border border-line px-2 font-medium hover:border-accent-edge">Hive control</button>}
     </div>
   );
@@ -223,7 +223,7 @@ function HiveControl({ m, onClose }: { m: MemberT; onClose: () => void }) {
           ))}
         </fieldset>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => ref.current?.close()} className="min-h-11 px-4 text-muted hover:text-ink">Cancel</button>
+          <button type="button" onClick={() => ref.current?.close()} className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-muted hover:border-accent-edge hover:text-ink">Cancel</button>
           <button disabled={pending} className="min-h-11 rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60">{pending ? "Saving…" : "Save"}</button>
         </div>
       </form>

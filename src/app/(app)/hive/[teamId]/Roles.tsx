@@ -78,8 +78,8 @@ function RoleRow({ team, role, holders, onDone }: { team: TeamT; role: RoleT | n
           {role && !locked && holders.length > 0 && <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" name="apply" defaultChecked className="size-5 accent-[var(--accent)]" /> Also give these powers to the {holders.length} {holders.length === 1 ? "person" : "people"} with this role</label>}
           <div className="flex flex-wrap items-center gap-3">
             <button disabled={pending} className={btnPrimary}>{pending ? "Saving…" : role ? "Save role" : "Add role"}</button>
-            {!role && <button type="button" onClick={onDone} className="min-h-11 px-3 text-muted hover:text-ink">Cancel</button>}
-            {role && !locked && <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete the ${role.name} role? ${holders.length ? "The people who have it become plain members but keep their current powers." : ""}`)) start(async () => { await deleteRole(role.id); router.refresh(); }); }} className="ml-auto min-h-11 px-2 text-sm text-muted hover:text-danger">Delete role</button>}
+            {!role && <button type="button" onClick={onDone} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Cancel</button>}
+            {role && !locked && <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete the ${role.name} role? ${holders.length ? "The people who have it become plain members but keep their current powers." : ""}`)) start(async () => { await deleteRole(role.id); router.refresh(); }); }} className="ml-auto min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Delete role</button>}
           </div>
           <p role="status" className="text-sm text-muted">{msg}</p>
         </form>

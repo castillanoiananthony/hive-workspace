@@ -95,12 +95,12 @@ export async function deleteGoal(id: string) {
 
 // ---------- tasks ----------
 
-export async function quickAddTask(input: string, goalId: string | null = null) {
+export async function quickAddTask(input: string, goalId: string | null = null, importance = 0) {
   const me = await requireUser();
   const parsed = parseQuickAdd(text(input, 300), me.timezone);
   if (!parsed.title) throw new Error("Type what you need to do.");
   const parent = await ownGoal(me.id, goalId);
-  const [row] = await db.insert(task).values({ ownerId: me.id, title: parsed.title.slice(0, 200), dueAt: parsed.dueAt, hasTime: parsed.hasTime, goalId: parent?.id ?? null }).returning({ id: task.id });
+  const [row] = await db.insert(task).values({ ownerId: me.id, title: parsed.title.slice(0, 200), dueAt: parsed.dueAt, hasTime: parsed.hasTime, goalId: parent?.id ?? null, importance: [1, 2, 3].includes(Number(importance)) ? Number(importance) : 0 }).returning({ id: task.id });
   await touchGoal(parent?.id ?? null);
   revalidatePath("/cell");
   return { id: row.id, title: parsed.title, dueAt: parsed.dueAt?.toISOString() ?? null, hasTime: parsed.hasTime };

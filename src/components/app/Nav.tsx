@@ -87,7 +87,7 @@ export function SidebarView({ path, me }: { path: string; me: Me | null }) {
 
 export function BottomNavView({ path, me = null }: { path: string; me?: Me | null }) {
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line/70 bg-surface/80 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_32px_-20px_rgb(0_0_0/0.6)] backdrop-blur-xl md:hidden">
       {MOBILE.map((i) => {
         const on = active(path, i.href) || (i.href === "/profile" && active(path, "/tutorial"));
         return (
@@ -96,7 +96,7 @@ export function BottomNavView({ path, me = null }: { path: string; me?: Me | nul
             {/* "Me" shows your own picture once you've added one */}
             {i.icon === "me" && me?.avatar
               ? <span className={`rounded-full ring-2 ${on ? "ring-accent-edge" : "ring-transparent"}`}><Avatar me={me} size={24} /></span>
-              : <span className={on ? "text-accent-edge" : undefined}><Icon name={i.icon} /></span>}
+              : <span className={`grid h-8 w-12 place-items-center rounded-full ${on ? "bg-accent/15 text-accent-edge" : ""}`}><Icon name={i.icon} /></span>}
             {i.label}
           </Link>
         );

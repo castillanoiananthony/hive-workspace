@@ -85,7 +85,7 @@ export function Wizard({ firstName }: { firstName: string }) {
               {pending ? "Saving…" : s.button}
             </button>
             {step === 2 && (
-              <button type="button" disabled={pending} onClick={() => start(() => finishOnboarding())} className="min-h-12 px-3 text-muted underline underline-offset-4 hover:text-ink">
+              <button type="button" disabled={pending} onClick={() => start(() => finishOnboarding())} className="min-h-12 rounded-[var(--radius)] border border-line px-4 text-muted hover:border-accent-edge hover:text-ink">
                 Skip for now
               </button>
             )}

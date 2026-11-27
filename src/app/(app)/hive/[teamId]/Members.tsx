@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { BusyOverlay } from "@/components/app/BusyOverlay";
 import { addMembers, removeMember, renameMember, setJoinLink } from "../actions";
 import { MemberAvatar } from "./MemberAvatar";
 import { has, nameOf, type MeT, type MemberT, type RoleT, type TeamT } from "./types";
@@ -65,10 +66,10 @@ function MemberRow({ m, team, role, canManage, me }: { m: MemberT; team: TeamT; 
           </>
         )}
       </div>
-      {canManage && !editing && <button type="button" onClick={() => setEditing(true)} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Rename</button>}
+      {canManage && !editing && <button type="button" onClick={() => setEditing(true)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">Rename</button>}
       {canManage && !m.isAdmin && (
         <button type="button" disabled={pending} onClick={() => { if (confirm(`Remove ${nameOf(m)} from the team? Their task assignments are removed too.`)) start(async () => { await removeMember(m.id); router.refresh(); }); }}
-          className="min-h-11 px-2 text-sm text-muted hover:text-danger">Remove</button>
+          className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Remove</button>
       )}
     </li>
   );
@@ -96,6 +97,7 @@ function Invite({ team }: { team: TeamT }) {
         } catch (err) { setReport(err instanceof Error ? err.message : "Couldn't invite them."); }
       });
     }}>
+      <BusyOverlay show={pending} label="Sending invites…" />
       <h2 className="font-display text-lg font-semibold">Invite by email</h2>
       <label htmlFor="emails" className="text-sm text-muted">One email or many, separated by commas or new lines. “Ana Cruz &lt;ana@school.edu&gt;” keeps the name. People who already have an account join straight away.</label>
       <textarea id="emails" value={input} onChange={(e) => setInput(e.target.value)} rows={5} placeholder={"ana@school.edu, ben@school.edu\nCarla Reyes <carla@school.edu>"} className={`${field} py-2`} />

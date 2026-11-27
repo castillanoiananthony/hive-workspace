@@ -1,6 +1,7 @@
 "use client";
 import { unstable_rethrow } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import { BusyOverlay } from "@/components/app/BusyOverlay";
 import { ROLE_PRESETS } from "@/lib/hive-perms";
 import { TEAM_COLORS_CLIENT } from "./colors";
 import { createTeam } from "./actions";
@@ -13,6 +14,7 @@ export function NewTeamButton() {
   const [pending, start] = useTransition();
   return (
     <>
+      <BusyOverlay show={pending} label="Creating your team…" />
       <button type="button" onClick={() => ref.current?.showModal()} className="min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover">New team</button>
       <dialog ref={ref} aria-labelledby="new-team-h" className="m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100%-2rem))] overflow-x-hidden overflow-y-auto rounded-[var(--radius)] border border-line bg-raised p-0 text-ink backdrop:bg-black/60">
         <form
@@ -34,7 +36,7 @@ export function NewTeamButton() {
           <RolePicker roles={roles} onChange={setRoles} />
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => ref.current?.close()} className="min-h-11 px-4 text-muted hover:text-ink">Cancel</button>
+            <button type="button" onClick={() => ref.current?.close()} className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-muted hover:border-accent-edge hover:text-ink">Cancel</button>
             <button disabled={pending} className="min-h-11 rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent disabled:opacity-60">{pending ? "Creating…" : "Create team"}</button>
           </div>
         </form>
@@ -78,11 +80,11 @@ function RolePicker({ roles, onChange }: { roles: string[]; onChange: (r: string
             <input id={`role-${i}`} value={r} onChange={(e) => set(i, e.target.value)} maxLength={40} required={i === 0}
               className="min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge" />
             {i === 0 ? <span className="w-20 shrink-0 text-sm text-muted">You</span>
-              : <button type="button" onClick={() => onChange(roles.filter((_, j) => j !== i))} className="min-h-11 w-20 shrink-0 text-sm text-muted hover:text-danger" aria-label={`Remove ${r || "this role"}`}>Remove</button>}
+              : <button type="button" onClick={() => onChange(roles.filter((_, j) => j !== i))} className="min-h-11 w-20 shrink-0 rounded-[var(--radius)] border border-line text-sm text-muted hover:border-danger hover:text-danger" aria-label={`Remove ${r || "this role"}`}>Remove</button>}
           </li>
         ))}
       </ol>
-      {roles.length < 12 && <button type="button" onClick={() => onChange([...roles, ""])} className="min-h-11 justify-self-start px-1 text-sm font-medium text-accent-text hover:underline">+ Add a role</button>}
+      {roles.length < 12 && <button type="button" onClick={() => onChange([...roles, ""])} className="min-h-11 justify-self-start rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">+ Add a role</button>}
       <p className="text-sm text-muted">The first role is you, the Leader. You can rename roles and choose what each one may do later in Team settings.</p>
     </fieldset>
   );

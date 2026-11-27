@@ -22,7 +22,8 @@ const VIEWS = [
   { id: "listMonth", label: "Agenda" },
 ] as const;
 
-export function HiveCalendar({ tasks, tz }: { tasks: CalTask[]; tz: string }) {
+/** `embedded`: inside a team page, so no page heading, no "My Cell" filter. */
+export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: { tasks: CalTask[]; tz: string; editable?: boolean; embedded?: boolean }) {
   const ref = useRef<CalendarRef>(null);
   const router = useRouter();
   const [view, setView] = useState<string>("dayGridMonth");
@@ -39,9 +40,9 @@ export function HiveCalendar({ tasks, tz }: { tasks: CalTask[]; tz: string }) {
   const spaces = useMemo(() => {
     const m = new Map<string, { name: string; color: string | null }>();
     for (const t of tasks) m.set(t.space, { name: t.spaceName, color: t.color });
-    if (!m.has("cell")) m.set("cell", { name: "My Cell", color: null });
+    if (!embedded && !m.has("cell")) m.set("cell", { name: "My Cell", color: null });
     return [...m.entries()];
-  }, [tasks]);
+  }, [tasks, embedded]);
 
   const events = tasks
     .filter((t) => !hidden.has(t.space))
@@ -71,13 +72,13 @@ export function HiveCalendar({ tasks, tz }: { tasks: CalTask[]; tz: string }) {
   const btn = "min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium hover:border-accent-edge";
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      {!embedded && <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold">Calendar</h1>
           <p className="mt-1 text-muted">Every task with a due date. Drag one to another day to move it.</p>
         </div>
         <Link href="/settings#calendar-feed" className="text-sm text-accent-text underline underline-offset-4">Add to Google Calendar</Link>
-      </div>
+      </div>}
 
       {tasks.length === 0 ? (
         <div className="mt-8">
@@ -128,7 +129,7 @@ export function HiveCalendar({ tasks, tz }: { tasks: CalTask[]; tz: string }) {
               nowIndicator
               now={() => { const z = utcToZoned(new Date(), tz); return `${z.date}T${z.time}:00`; }} // "today" and the now-line in the user's zone
               scrollTime="08:00:00"
-              editable
+              editable={editable}
               eventDurationEditable={false}
               longPressDelay={350}
               eventLongPressDelay={350}

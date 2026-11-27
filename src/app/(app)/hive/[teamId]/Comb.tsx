@@ -85,10 +85,10 @@ export function Comb({ team, members, tasks, stream, me }: { team: TeamT; member
                   {/* actions under the post, so the name and time keep the full width on phones */}
                   <div className="mt-1 flex justify-end empty:hidden">
                     {s.kind === "post" && has(me, "hide") && (
-                      <button type="button" disabled={pending} onClick={() => start(async () => { await hideCombPost(s.id, !s.hidden); router.refresh(); })} className="min-h-11 shrink-0 px-2 text-sm text-muted hover:text-ink">{s.hidden ? "Unhide" : "Hide"}</button>
+                      <button type="button" disabled={pending} onClick={() => start(async () => { await hideCombPost(s.id, !s.hidden); router.refresh(); })} className="min-h-11 shrink-0 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">{s.hidden ? "Unhide" : "Hide"}</button>
                     )}
                     {s.kind === "post" && (s.memberId === me.memberId || me.isAdmin) && (
-                      <button type="button" disabled={pending} onClick={() => { if (confirm("Delete this post?")) start(async () => { await deleteCombPost(s.id); router.refresh(); }); }} className="min-h-11 shrink-0 px-2 text-sm text-muted hover:text-danger">Delete</button>
+                      <button type="button" disabled={pending} onClick={() => { if (confirm("Delete this post?")) start(async () => { await deleteCombPost(s.id); router.refresh(); }); }} className="min-h-11 shrink-0 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Delete</button>
                     )}
                   </div>
                 </article>

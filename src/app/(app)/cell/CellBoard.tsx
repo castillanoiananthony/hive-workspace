@@ -1,5 +1,6 @@
 "use client";
 import { ImportanceTag } from "@/components/app/ImportanceTag";
+import { IMPORTANCE } from "@/lib/importance";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
@@ -119,7 +120,7 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
             {LEVEL[g.level]}, {g.period}. {g.progress}% done{kids.length + own.length ? `, ${kids.length + own.length} inside` : ""}
           </p>
         </div>
-        <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)} className="min-h-11 rounded-[var(--radius)] px-3 text-sm text-muted hover:text-ink">
+        <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">
           {open ? "Hide" : "Show"}
         </button>
       </div>
@@ -133,10 +134,10 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
           )}
           {own.length > 0 && <ul className="mt-2 grid gap-1">{own.map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>}
           <div className="mt-2 flex flex-wrap gap-x-1 text-sm">
-            <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} className="min-h-11 px-2 font-medium text-accent-text">Add task</button>
-            {canHaveChildren && <button type="button" onClick={() => onAddChild(g)} className="min-h-11 px-2 text-muted hover:text-ink">Add {g.level === "year" ? "month" : "week"} goal</button>}
-            <button type="button" onClick={() => onEdit(g)} className="min-h-11 px-2 text-muted hover:text-ink">Edit</button>
-            <button type="button" onClick={() => onArchive(g)} className="min-h-11 px-2 text-muted hover:text-ink">Archive</button>
+            <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} className="min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 font-medium text-accent-text">Add task</button>
+            {canHaveChildren && <button type="button" onClick={() => onAddChild(g)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Add {g.level === "year" ? "month" : "week"} goal</button>}
+            <button type="button" onClick={() => onEdit(g)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Edit</button>
+            <button type="button" onClick={() => onArchive(g)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-muted hover:border-accent-edge hover:text-ink">Archive</button>
           </div>
         </div>
       )}
@@ -157,7 +158,7 @@ export function TourCard() {
       <Bee pose="wave" size={48} className="shrink-0" />
       <p className="min-w-0 flex-1 basis-56"><span className="font-semibold">New here?</span> <span className="text-muted">Take the short tour: goals, tasks, the calendar and how team reminders work.</span></p>
       <Link href="/tutorial" className="inline-flex min-h-11 items-center rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover">Take the tour</Link>
-      <button type="button" onClick={() => { localStorage.setItem("hive-tour-dismissed", "1"); setShow(false); }} className="min-h-11 px-2 text-sm text-muted hover:text-ink">No thanks</button>
+      <button type="button" onClick={() => { localStorage.setItem("hive-tour-dismissed", "1"); setShow(false); }} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">No thanks</button>
     </section>
   );
 }
@@ -175,7 +176,7 @@ function Forgotten({ goals, onArchive }: { goals: GoalView[]; onArchive: (g: Goa
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <h2 id="forgotten-h" className="font-display text-lg font-semibold">These goals haven&apos;t moved in a while</h2>
-          <button type="button" onClick={() => { localStorage.setItem("hive-forgotten-hidden", today); setHiddenOn(today); }} className="min-h-11 shrink-0 px-2 text-sm text-muted hover:text-ink">Not now</button>
+          <button type="button" onClick={() => { localStorage.setItem("hive-forgotten-hidden", today); setHiddenOn(today); }} className="min-h-11 shrink-0 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">Not now</button>
         </div>
         <p className="text-sm text-muted">Nothing has changed on them for two weeks. Plan one small step, give them a week, or put them away.</p>
         <ul className="mt-3 grid gap-3">
@@ -184,7 +185,7 @@ function Forgotten({ goals, onArchive }: { goals: GoalView[]; onArchive: (g: Goa
               <span className="min-w-0 flex-1 basis-56 font-medium">{g.title}</span>
               <button type="button" disabled={pending} onClick={() => start(() => newTask(g.id))} className="min-h-11 rounded-[var(--radius)] bg-accent px-3 text-sm font-semibold text-on-accent hover:bg-accent-hover">Plan a task</button>
               <button type="button" disabled={pending} onClick={() => start(() => snoozeGoal(g.id))} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium hover:border-accent-edge">Snooze 1 week</button>
-              <button type="button" disabled={pending} onClick={() => onArchive(g)} className="min-h-11 px-3 text-sm text-muted hover:text-ink">Archive</button>
+              <button type="button" disabled={pending} onClick={() => onArchive(g)} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">Archive</button>
             </li>
           ))}
         </ul>
@@ -202,8 +203,8 @@ function Archived({ goals }: { goals: { id: string; title: string; level: string
         {goals.map((g) => (
           <li key={g.id} className="flex flex-wrap items-center gap-2 px-4 py-2">
             <span className="min-w-0 flex-1">{g.title} <span className="text-sm text-muted">({g.level})</span></span>
-            <button type="button" disabled={pending} onClick={() => start(() => archiveGoal(g.id, true))} className="min-h-11 px-2 text-sm font-medium text-accent-text">Restore</button>
-            <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete “${g.title}” for good? Its tasks stay, without a goal. This can't be undone.`)) start(() => deleteGoal(g.id)); }} className="min-h-11 px-2 text-sm text-muted hover:text-danger">Delete for good</button>
+            <button type="button" disabled={pending} onClick={() => start(() => archiveGoal(g.id, true))} className="min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">Restore</button>
+            <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete “${g.title}” for good? Its tasks stay, without a goal. This can't be undone.`)) start(() => deleteGoal(g.id)); }} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Delete for good</button>
           </li>
         ))}
       </ul>
@@ -252,6 +253,7 @@ export function TaskRow({ task: t, tz }: { task: TaskView; tz: string }) {
 
 export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label?: string }) {
   const [value, setValue] = useState("");
+  const [importance, setImportance] = useState(0);
   const [status, setStatus] = useState<{ text: string; id?: string } | null>(null);
   const [pending, start] = useTransition();
   const input = useRef<HTMLInputElement>(null);
@@ -262,9 +264,9 @@ export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label
     if (!value.trim()) return;
     start(async () => {
       try {
-        const r = await quickAddTask(value);
+        const r = await quickAddTask(value, null, importance);
         setStatus({ text: `Added “${r.title}”${r.dueAt ? `, due ${formatDue(new Date(r.dueAt), r.hasTime, tz)}` : ""}.`, id: r.id });
-        setValue("");
+        setValue(""); setImportance(0);
         input.current?.focus();
       } catch (err) {
         setStatus({ text: err instanceof Error ? err.message : "Couldn't add that task." });
@@ -282,6 +284,16 @@ export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label
           className="min-h-12 min-w-0 flex-1 rounded-[var(--radius)] border border-line bg-surface px-3 text-base placeholder:text-muted focus:border-accent-edge"
         />
         <button disabled={pending || !value.trim()} className="min-h-12 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-accent-edge disabled:opacity-50">Add</button>
+      </div>
+      <div role="radiogroup" aria-label="Importance" className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted">Importance</span>
+        {[{ v: 0, label: "None", color: null as string | null }, ...IMPORTANCE.map((l) => ({ v: l.v as number, label: l.label, color: l.color as string | null }))].map((l) => (
+          <button key={l.v} type="button" role="radio" aria-checked={importance === l.v} onClick={() => setImportance(l.v)}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-3 text-sm aria-checked:bg-raised aria-checked:font-semibold"
+            style={importance === l.v && l.color ? { borderColor: l.color } : importance === l.v ? { borderColor: "var(--accent-edge)" } : undefined}>
+            {l.color && <span aria-hidden className="size-2.5 rounded-full" style={{ background: l.color }} />}{l.label}
+          </button>
+        ))}
       </div>
       <p id="quick-hint" className="mt-2 min-h-6 text-sm text-muted" aria-live="polite">
         {preview?.dueAt

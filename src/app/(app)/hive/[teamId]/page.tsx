@@ -8,6 +8,8 @@ import { db } from "@/db";
 import { assignment, combPost, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
 import { ALL_PERMS, can } from "@/lib/hive-perms";
 import { requireUser } from "@/lib/session";
+import { lastDays } from "@/lib/activity";
+import { utcToZoned } from "@/lib/dates";
 import { ensureRoles, teamAccess } from "@/lib/teams";
 import { TeamView } from "./TeamView";
 
@@ -53,8 +55,12 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
   const avatarOf = (userId: string | null) => { const a = avatars.find((x) => x.userId === userId); return a ? `/api/profile-image/${userId}/avatar?v=${a.updatedAt.getTime()}` : null; };
   const doneMarks = taskIds.length ? await db.select({ taskId: assignment.taskId, memberId: assignment.memberId, at: assignment.doneAt }).from(assignment).where(and(inArray(assignment.taskId, taskIds), isNotNull(assignment.doneAt))) : [];
 
+  const days = lastDays(me.timezone, { done: assigned.map((a) => a.doneAt), created: tasks.map((x) => x.createdAt), posts: posts.map((p) => p.createdAt) });
+
   return (
     <TeamView
+      days={days}
+      calendar={tasks.filter((x) => x.dueAt).map((x) => { const z = utcToZoned(x.dueAt!, me.timezone); return { id: x.id, title: x.title || "Untitled task", done: x.status === "done", date: z.date, time: x.hasTime ? z.time : null, space: t.id, spaceName: t.name, color: t.color }; })}
       tz={me.timezone}
       me={{ memberId: mine.id, isAdmin: mine.isAdmin, perms: mine.isAdmin ? ALL_PERMS : mine.perms }}
       team={{ id: t.id, name: t.name, color: t.color, digestEnabled: t.digestEnabled, digestDay: t.digestDay, joinCode: can(mine, "members") ? t.joinCode : null, importanceColors: t.importanceColors ?? null, app: process.env.APP_URL ?? "http://localhost:3000" }}

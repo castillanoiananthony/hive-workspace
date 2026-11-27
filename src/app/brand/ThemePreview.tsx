@@ -36,7 +36,7 @@ export function ThemePreview() {
         <input type="color" value={accent ?? PRESETS[preset].accent} onChange={(e) => apply(preset, e.target.value)} className="h-10 w-14 cursor-pointer rounded border border-line bg-transparent" />
       </label>
       {accent && (
-        <button type="button" onClick={() => apply(preset, null)} className="min-h-11 text-sm text-accent-text underline underline-offset-4">
+        <button type="button" onClick={() => apply(preset, null)} className="min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm text-accent-text">
           Reset accent
         </button>
       )}

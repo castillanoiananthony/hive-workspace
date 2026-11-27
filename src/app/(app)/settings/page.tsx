@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { requireUser } from "@/lib/session";
-import { signOut } from "../actions";
+import { SignOutButton } from "@/components/app/SignOutButton";
 import { NameField } from "./NameField";
 import { Appearance } from "./Appearance";
 import { CalendarFeed } from "./CalendarFeed";
@@ -35,9 +35,7 @@ async function Body() {
           <div><dt className="inline">Signed in as </dt><dd className="inline break-all text-ink">{me.email}</dd></div>
           <div><dt className="inline">Time zone: </dt><dd className="inline text-ink">{me.timezone}</dd></div>
         </dl>
-        <form action={signOut} className="mt-4">
-          <button className="min-h-11 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-danger">Sign out</button>
-        </form>
+        <div className="mt-4"><SignOutButton className="min-h-11 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-danger disabled:opacity-60" /></div>
       </section>
       <Appearance initial={me.theme ?? DEFAULT_THEME} />
       <CalendarFeed initialToken={me.icsToken} appUrl={process.env.APP_URL ?? "http://localhost:3000"} />

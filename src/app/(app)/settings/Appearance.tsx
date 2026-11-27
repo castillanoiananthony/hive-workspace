@@ -77,7 +77,7 @@ export function Appearance({ initial }: { initial: ThemeSettings }) {
           Accent colour
           <input type="color" value={s.accent ?? PRESETS[s.preset].accent} onChange={(e) => update({ accent: e.target.value as ThemeSettings["accent"] })} className="h-10 w-14 cursor-pointer rounded border border-line bg-transparent" />
         </label>
-        {s.accent && <button type="button" onClick={() => update({ accent: null })} className="min-h-11 text-sm text-accent-text underline underline-offset-4">Use the theme&apos;s colour</button>}
+        {s.accent && <button type="button" onClick={() => update({ accent: null })} className="min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm text-accent-text">Use the theme&apos;s colour</button>}
         <HexProgress value={68} size={40} label="Preview of goal progress" />
       </div>
       <p className="mt-3 text-sm text-muted">Any colour works: HIVE-WORKSPACE adjusts it so text and buttons stay easy to read.</p>

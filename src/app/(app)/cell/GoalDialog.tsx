@@ -86,7 +86,7 @@ export function GoalDialog({ mode, goals, onClose }: { mode: GoalDialogMode; goa
 
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => ref.current?.close()} className="min-h-11 rounded-[var(--radius)] px-4 text-muted hover:text-ink">Cancel</button>
+          <button type="button" onClick={() => ref.current?.close()} className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-muted hover:border-accent-edge hover:text-ink">Cancel</button>
           <button disabled={pending} className="min-h-11 rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60">
             {pending ? "Saving…" : editing ? "Save changes" : "Add goal"}
           </button>

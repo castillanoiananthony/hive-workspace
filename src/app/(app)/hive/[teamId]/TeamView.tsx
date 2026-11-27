@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
 import { HexBadge } from "@/components/app/HexBadge";
+import { BusyOverlay } from "@/components/app/BusyOverlay";
 import { HexCheck } from "@/components/app/HexCheck";
 import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { IMPORTANCE } from "@/lib/importance";
@@ -16,6 +17,8 @@ import { MemberAvatar } from "./MemberAvatar";
 import { Members } from "./Members";
 import { Roles } from "./Roles";
 import { Vault, type VaultLink } from "./Vault";
+import { Activity, type DayT } from "./Activity";
+import { HiveCalendar, type CalTask } from "../../calendar/HiveCalendar";
 import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT } from "./types";
 
 type Team = TeamT;
@@ -24,11 +27,11 @@ type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[] };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
-  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
+  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "calendar", label: "Calendar" }, { id: "activity", label: "Activity" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
   { id: "templates", label: "Templates", need: "templates" }, { id: "log", label: "Email log", need: "log" }, { id: "settings", label: "Team settings", need: "settings" },
 ];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -56,15 +59,17 @@ export function TeamView(props: Props) {
         {has(me, "tasks") && <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button>}
       </div>
 
-      <div role="tablist" aria-label="Team sections" className="mt-8 flex gap-1 overflow-x-auto border-b border-line">
+      <div role="tablist" aria-label="Team sections" className="mt-8 -mx-1 flex gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 [scrollbar-width:none]">
         {tabs.map((t) => (
           <button key={t.id} type="button" role="tab" id={`tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`panel-${t.id}`} onClick={() => setTab(t.id)}
-            className="min-h-11 shrink-0 border-b-2 border-transparent px-4 font-medium text-muted aria-selected:border-accent-edge aria-selected:text-ink">{t.label}</button>
+            className="min-h-10 shrink-0 rounded-full px-4 font-medium whitespace-nowrap text-muted hover:text-ink aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-on-accent aria-selected:shadow-[0_6px_18px_-8px_var(--accent)]">{t.label}</button>
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-6">
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
         {tab === "board" && <Board {...props} onRoster={() => setTab("members")} />}
+        {tab === "calendar" && (props.calendar.length ? <HiveCalendar tasks={props.calendar} tz={props.tz} editable={has(me, "tasks")} embedded /> : <p className="rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">No team tasks have a due date yet. Give one a date and it shows up here.</p>)}
+        {tab === "activity" && <Activity tasks={tasks} assigned={props.assigned} members={members} days={props.days} />}
         {tab === "vault" && <Vault team={team} links={props.links} members={members} me={me} />}
         {tab === "hierarchy" && <Hierarchy team={team} members={members} roles={props.roles} me={me} />}
         {tab === "members" && <Members team={team} members={members} roles={props.roles} me={me} />}
@@ -204,7 +209,7 @@ function Templates({ team, members, templates }: { team: Team; members: Member[]
             <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id, t.id))} className={btnPrimary}>Use template</button>
           </div>
           <Recurrence template={t} members={members} />
-          <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete the template “${t.title}”? Tasks made from it stay.`)) start(() => deleteTemplate(t.id)); }} className="mt-3 min-h-11 text-sm text-muted hover:text-danger">Delete template</button>
+          <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete the template “${t.title}”? Tasks made from it stay.`)) start(() => deleteTemplate(t.id)); }} className="mt-3 min-h-11 justify-self-start rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Delete template</button>
         </li>
       ))}
     </ul>
@@ -297,6 +302,7 @@ function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: Ro
   const [msg, setMsg] = useState<string | null>(null);
   const [confirmName, setConfirmName] = useState("");
   const [pending, start] = useTransition();
+  const [deleting, setDeleting] = useState(false);
   return (
     <div className="grid max-w-2xl gap-10">
       {has(me, "settings") && <form className="grid gap-4" onSubmit={(e) => {
@@ -321,7 +327,7 @@ function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: Ro
                 {l.label}
               </label>
             ))}
-            <button type="button" onClick={() => setImp({})} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Reset to default</button>
+            <button type="button" onClick={() => setImp({})} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">Reset to default</button>
           </div>
         </fieldset>
         <fieldset className="grid gap-2 rounded-[var(--radius)] border border-line p-4">
@@ -338,12 +344,13 @@ function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: Ro
 
       {me.isAdmin && <Roles team={team} roles={roles} members={members} />}
 
+      <BusyOverlay show={deleting} label="Deleting the team…" />
       {me.isAdmin && <section aria-labelledby="danger-h" className="grid gap-3 rounded-[var(--radius)] border border-danger/50 p-5">
         <h2 id="danger-h" className="font-semibold text-danger">Delete this team</h2>
         <p className="text-sm text-muted">This deletes the team&apos;s tasks, roster and templates. It can&apos;t be undone. Type <strong className="text-ink">{team.name}</strong> to confirm.</p>
         <label className="sr-only" htmlFor="confirm-name">Team name</label>
         <input id="confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} className={field} autoComplete="off" />
-        <button type="button" disabled={pending || confirmName.trim() !== team.name} onClick={() => start(() => deleteTeam(team.id, confirmName))}
+        <button type="button" disabled={pending || confirmName.trim() !== team.name} onClick={() => { setDeleting(true); start(async () => { try { await deleteTeam(team.id, confirmName); } catch (e) { setDeleting(false); throw e; } }); }}
           className="min-h-11 justify-self-start rounded-[var(--radius)] border border-danger px-4 font-medium text-danger disabled:opacity-50">Delete team for good</button>
       </section>}
     </div>

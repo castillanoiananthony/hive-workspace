@@ -22,7 +22,7 @@ export function LoginForm({ google }: { google: boolean }) {
         <p className="mt-1 text-sm text-muted">
           We sent a sign-in link to <span className="break-all text-ink">{state.email}</span>. It expires in 5 minutes.
         </p>
-        <button type="button" onClick={() => setState({ kind: "idle" })} className="mt-3 min-h-11 text-sm text-accent-text underline underline-offset-4">
+        <button type="button" onClick={() => setState({ kind: "idle" })} className="mt-3 min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm text-accent-text">
           Use a different email
         </button>
       </div>

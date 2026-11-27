@@ -176,7 +176,7 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
           <input id="due-date" type="date" value={doc.dueDate ?? ""} onChange={(e) => update({ dueDate: e.target.value || null, dueTime: e.target.value ? doc.dueTime : null })} className={field} />
           <label htmlFor="due-time" className="sr-only">Due time (optional)</label>
           <input id="due-time" type="time" value={doc.dueTime ?? ""} disabled={!doc.dueDate} onChange={(e) => update({ dueTime: e.target.value || null })} className={`${field} disabled:opacity-50`} />
-          {doc.dueDate && <button type="button" onClick={() => update({ dueDate: null, dueTime: null })} className="min-h-11 px-2 text-sm text-muted hover:text-ink">Clear</button>}
+          {doc.dueDate && <button type="button" onClick={() => update({ dueDate: null, dueTime: null })} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink">Clear</button>}
         </dd>
         {team ? (
           <>
@@ -187,7 +187,7 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
               ) : (
                 <fieldset className="grid gap-1">
                   <legend className="sr-only">Assigned to</legend>
-                  <button type="button" onClick={() => update({ assignees: doc.assignees?.length === team.members.length ? [] : team.members.map((m) => m.id) })} className="min-h-11 justify-self-start text-sm font-medium text-accent-text">
+                  <button type="button" onClick={() => update({ assignees: doc.assignees?.length === team.members.length ? [] : team.members.map((m) => m.id) })} className="min-h-11 justify-self-start rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">
                     {doc.assignees?.length === team.members.length ? "Clear everyone" : "Assign whole team"}
                   </button>
                   {team.members.map((m) => (
@@ -272,7 +272,7 @@ export function TaskEditor({ id, initial, goals, team }: { id: string; initial: 
             </li>
           ))}
         </ul>
-        <button type="button" onClick={() => update({ links: [...doc.links, { title: "", url: "" }] })} className="mt-2 min-h-11 text-sm font-medium text-accent-text">Add a link</button>
+        <button type="button" onClick={() => update({ links: [...doc.links, { title: "", url: "" }] })} className="mt-2 min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">Add a link</button>
         {note && <p role="status" className="mt-2 text-sm text-danger">{note}</p>}
       </section>
 

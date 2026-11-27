@@ -61,7 +61,7 @@ export function HomeFeed({ me, tz, feed, upcoming, teams }: { me: Me; tz: string
         <section aria-labelledby="home-upnext" className="rounded-[var(--radius)] border border-line bg-surface p-4">
           <h2 id="home-upnext" className="font-display font-semibold">Up next</h2>
           {soon.length === 0 ? <p className="mt-2 text-sm text-muted">Nothing due this week.</p> : <ul className="mt-2 grid gap-1">{soon.slice(0, 6).map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>}
-          <Link href="/cell" className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-accent-text">Open My Cell</Link>
+          <Link href="/cell" className="mt-2 inline-flex min-h-11 items-center rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">Open My Cell</Link>
         </section>
         <section aria-labelledby="home-teams" className="rounded-[var(--radius)] border border-line bg-surface p-4">
           <h2 id="home-teams" className="font-display font-semibold">Your teams</h2>
@@ -74,7 +74,7 @@ export function HomeFeed({ me, tz, feed, upcoming, teams }: { me: Me; tz: string
               ))}
             </ul>
           )}
-          <Link href="/hive" className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-accent-text">{teams.length ? "All teams" : "Make a team"}</Link>
+          <Link href="/hive" className="mt-2 inline-flex min-h-11 items-center rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 text-sm font-medium text-accent-text">{teams.length ? "All teams" : "Make a team"}</Link>
         </section>
       </aside>
     </div>

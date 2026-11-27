@@ -52,7 +52,7 @@ export function Vault({ team, links, members, me }: { team: TeamT; links: VaultL
                       </div>
                       <div className="flex gap-1">
                         <a href={l.url} target="_blank" rel="noreferrer noopener" className="inline-flex min-h-11 items-center rounded-[var(--radius)] border border-line px-3 text-sm font-medium hover:border-accent-edge">Open</a>
-                        {canAdd && <button type="button" disabled={pending} onClick={() => { if (confirm(`Remove “${l.title}” from the Vault?`)) start(async () => { await deleteVaultLink(l.id); router.refresh(); }); }} className="min-h-11 px-2 text-sm text-muted hover:text-danger">Remove</button>}
+                        {canAdd && <button type="button" disabled={pending} onClick={() => { if (confirm(`Remove “${l.title}” from the Vault?`)) start(async () => { await deleteVaultLink(l.id); router.refresh(); }); }} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Remove</button>}
                       </div>
                     </li>
                   ))}

@@ -15,7 +15,7 @@ export function UndoBar({ value, onClose }: { value: Undo; onClose: () => void }
       {value && (
         <div className="pointer-events-auto flex items-center gap-4 rounded-[var(--radius)] border border-line bg-raised px-4 py-2 shadow-lg">
           <span>{value.message}</span>
-          <button type="button" onClick={() => { value.undo(); onClose(); }} className="min-h-11 font-semibold text-accent-text">Undo</button>
+          <button type="button" onClick={() => { value.undo(); onClose(); }} className="min-h-11 rounded-[var(--radius)] border border-accent-edge/70 hover:bg-accent/10 px-3 font-semibold text-accent-text">Undo</button>
         </div>
       )}
     </div>

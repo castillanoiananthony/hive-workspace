@@ -93,7 +93,7 @@ export function ImageAdjuster({ kind, src, onCancel, onSave }: { kind: "avatar" 
           <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(+e.target.value)} className="flex-1 accent-[var(--accent)]" />
         </label>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => dialog.current?.close()} className="min-h-11 px-4 text-muted hover:text-ink">Cancel</button>
+          <button type="button" onClick={() => dialog.current?.close()} className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-muted hover:border-accent-edge hover:text-ink">Cancel</button>
           <button type="button" disabled={!img} onClick={save} className="min-h-11 rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60">Save</button>
         </div>
       </div>
