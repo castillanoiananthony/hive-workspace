@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { requireUser } from "@/lib/session";
@@ -40,6 +41,16 @@ async function Body() {
       </section>
       <Appearance initial={me.theme ?? DEFAULT_THEME} />
       <CalendarFeed initialToken={me.icsToken} appUrl={process.env.APP_URL ?? "http://localhost:3000"} />
+      <section aria-labelledby="about-h">
+        <h2 id="about-h" className="font-display text-xl font-semibold">About</h2>
+        <nav aria-label="About HIVE-WORKSPACE" className="mt-3 grid gap-1 sm:grid-cols-2">
+          {[["/developer", "Meet the developer", "Who made HIVE-WORKSPACE, and how to support it"], ["/tutorial", "Tutorial", "How every feature works"], ["/privacy", "Privacy", "What we keep and why"], ["/terms", "Terms", "The rules of the hive"]].map(([href, label, hint]) => (
+            <Link key={href} href={href} className="flex min-h-14 flex-col justify-center rounded-[var(--radius)] border border-line bg-surface px-4 py-2 hover:border-accent-edge">
+              <span className="font-medium">{label}</span><span className="text-sm text-muted">{hint}</span>
+            </Link>
+          ))}
+        </nav>
+      </section>
     </div>
   );
 }

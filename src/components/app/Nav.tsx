@@ -19,7 +19,7 @@ const MORE: Item[] = [
   { href: "/tutorial", label: "Tutorial", icon: "learn", hint: "How everything works" },
   { href: "/settings", label: "Settings", icon: "settings", hint: "Theme, text size, calendar link" },
 ];
-const MOBILE: Item[] = [...MAIN, { href: "/profile", label: "Me", icon: "me", hint: "" }]; // Tutorial and Settings live under Me
+const MOBILE: Item[] = [...MAIN, { href: "/settings", label: "Settings", icon: "settings", hint: "" }, { href: "/profile", label: "Me", icon: "me", hint: "" }]; // Tutorial and Meet the developer live under Me
 
 export type Me = { name: string; email: string; avatar: string | null };
 
@@ -87,12 +87,12 @@ export function SidebarView({ path, me }: { path: string; me: Me | null }) {
 
 export function BottomNavView({ path, me = null }: { path: string; me?: Me | null }) {
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
       {MOBILE.map((i) => {
-        const on = active(path, i.href) || (i.href === "/profile" && (active(path, "/settings") || active(path, "/tutorial")));
+        const on = active(path, i.href) || (i.href === "/profile" && active(path, "/tutorial"));
         return (
           <Link key={i.href} href={i.href} aria-current={on ? "page" : undefined}
-            className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${on ? "text-ink" : "text-muted"}`}>
+            className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 text-[0.7rem] leading-tight font-medium ${on ? "text-ink" : "text-muted"}`}>
             {/* "Me" shows your own picture once you've added one */}
             {i.icon === "me" && me?.avatar
               ? <span className={`rounded-full ring-2 ${on ? "ring-accent-edge" : "ring-transparent"}`}><Avatar me={me} size={24} /></span>
