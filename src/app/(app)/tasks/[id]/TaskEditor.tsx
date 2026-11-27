@@ -83,7 +83,9 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
         className="font-display w-full resize-none bg-transparent text-3xl leading-tight font-semibold placeholder:text-muted focus:outline-none sm:text-4xl [field-sizing:content]"
       />
 
-      <dl className="mt-6 grid gap-x-6 gap-y-4 rounded-[var(--radius)] border border-line bg-surface p-4 sm:grid-cols-[8rem_1fr]">
+      {/* details first on phones; on wide screens they sit in a right-hand column beside the document */}
+      <div className="mt-6 grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <dl className="grid gap-x-6 gap-y-4 self-start rounded-[var(--radius)] border border-line bg-surface p-4 sm:grid-cols-[8rem_1fr] lg:sticky lg:top-8 lg:col-start-2 lg:row-start-1 lg:grid-cols-1 lg:gap-y-2">
         <dt className="self-center text-sm text-muted">Status</dt>
         <dd>
           <div role="radiogroup" aria-label="Status" className="flex flex-wrap gap-2">
@@ -108,8 +110,9 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
           </select>
         </dd>
       </dl>
+      <div className="min-w-0 lg:col-start-1 lg:row-start-1">
 
-      <section aria-labelledby="notes-h" className="mt-8">
+      <section aria-labelledby="notes-h">
         <div className="flex items-baseline justify-between">
           <h2 id="notes-h" className="font-display text-lg font-semibold">Notes</h2>
           {editor && <Toolbar editor={editor} />}
@@ -152,6 +155,8 @@ export function TaskEditor({ id, initial, goals }: { id: string; initial: TaskDo
 
       <div className="mt-12 border-t border-line pt-6">
         <button type="button" onClick={remove} className="min-h-11 rounded-[var(--radius)] border border-line px-4 text-sm font-medium text-danger hover:border-danger">Delete task</button>
+      </div>
+      </div>
       </div>
     </article>
   );

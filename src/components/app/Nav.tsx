@@ -33,8 +33,8 @@ export const BottomNav = () => <BottomNavView path={usePathname()} />;
 // Views take the path as a prop so the layout can show them (with nothing highlighted) while the path is unknown.
 export function SidebarView({ path }: { path: string }) {
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
-      <Link href="/cell" className="mb-8 px-3"><Logo size={24} /></Link>
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
+      <Link href="/cell" className="mb-8 px-3 whitespace-nowrap"><Logo size={26} /></Link>
       <nav aria-label="Main" className="grid gap-1">
         {ITEMS.map((i) => {
           const active = path.startsWith(i.href);

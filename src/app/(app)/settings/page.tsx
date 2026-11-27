@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default function SettingsPage() {
   return (
-    <main className="mx-auto max-w-3xl px-5 py-8 sm:px-8 sm:py-10">
+    <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
       <h1 className="font-display text-3xl font-semibold">Settings</h1>
       <Suspense fallback={<p className="mt-6 text-muted">Loading…</p>}>
         <Body />

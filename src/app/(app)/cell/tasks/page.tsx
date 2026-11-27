@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "All tasks" };
 
 export default function TasksPage() {
   return (
-    <main className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-10">
+    <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
       <Suspense fallback={<p className="text-muted">Loading tasks…</p>}>
         <Tasks />
       </Suspense>

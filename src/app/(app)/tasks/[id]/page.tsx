@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Task" };
 
 export default function TaskPage({ params }: PageProps<"/tasks/[id]">) {
   return (
-    <main className="mx-auto max-w-3xl px-5 py-8 sm:px-8 sm:py-10">
+    <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
       <Suspense fallback={<p className="text-muted">Opening task…</p>}>
         <Task params={params} />
       </Suspense>

@@ -2,7 +2,16 @@ import { fit, onColor, ratio, shade, type Hex } from "./contrast";
 
 export type PresetId = "honey" | "daylight" | "midnight" | "ember" | "moss";
 export type Mode = "dark" | "light" | "system";
-export type ThemeSettings = { preset: PresetId; mode: Mode; accent?: Hex | null };
+export type TextSize = "s" | "m" | "l" | "xl";
+export type ThemeSettings = { preset: PresetId; mode: Mode; accent?: Hex | null; textSize?: TextSize };
+
+/** Root font size per setting; every rem-based size in the app (text, spacing, controls) scales with it. */
+export const TEXT_SIZES: Record<TextSize, { label: string; root: string }> = {
+  s: { label: "Small", root: "100%" },
+  m: { label: "Default", root: "112.5%" },
+  l: { label: "Large", root: "125%" },
+  xl: { label: "Extra large", root: "137.5%" },
+};
 
 type Palette = {
   label: string;
@@ -83,4 +92,4 @@ export function presetFor(s: ThemeSettings, systemDark: boolean): PresetId {
   return wantDark ? "honey" : "daylight";
 }
 
-export const DEFAULT_THEME: ThemeSettings = { preset: "honey", mode: "dark", accent: null };
+export const DEFAULT_THEME: ThemeSettings = { preset: "honey", mode: "dark", accent: null, textSize: "m" };

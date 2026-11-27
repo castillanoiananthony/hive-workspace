@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { goal, task, team, user } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireUser } from "@/lib/session";
-import { PRESETS, type Mode, type PresetId, type ThemeSettings } from "@/lib/themes";
+import { PRESETS, TEXT_SIZES, type Mode, type PresetId, type TextSize, type ThemeSettings } from "@/lib/themes";
 import { headers } from "next/headers";
 
 const clean = (s: unknown, max = 200) => String(s ?? "").trim().slice(0, max);
@@ -46,7 +46,8 @@ export async function saveTheme(settings: ThemeSettings) {
   const preset = (settings.preset in PRESETS ? settings.preset : "honey") as PresetId;
   const mode = (["dark", "light", "system"].includes(settings.mode) ? settings.mode : "dark") as Mode;
   const accent = settings.accent && /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : null;
-  await db.update(user).set({ theme: { preset, mode, accent: accent as ThemeSettings["accent"] } }).where(eq(user.id, me.id));
+  const textSize = (settings.textSize && settings.textSize in TEXT_SIZES ? settings.textSize : "m") as TextSize;
+  await db.update(user).set({ theme: { preset, mode, accent: accent as ThemeSettings["accent"], textSize } }).where(eq(user.id, me.id));
   revalidatePath("/settings");
 }
 

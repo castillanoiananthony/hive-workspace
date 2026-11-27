@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "My Cell" };
 
 export default function CellPage() {
   return (
-    <main className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-10">
+    <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
       <Suspense fallback={<p className="text-muted">Loading your cell…</p>}>
         <Cell />
       </Suspense>

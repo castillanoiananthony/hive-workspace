@@ -57,9 +57,11 @@ export function CellBoard({ goals, tasks, tz }: { goals: GoalView[]; tasks: Task
         </div>
       </div>
 
+      <div className="mt-6 grid gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="min-w-0">
       <QuickAdd tz={tz} />
 
-      <section aria-labelledby="ladder" className="mt-10">
+      <section aria-labelledby="ladder" className="mt-8">
         <h2 id="ladder" className="sr-only">Goal ladder</h2>
         {roots.length === 0 ? (
           <EmptyState
@@ -82,6 +84,9 @@ export function CellBoard({ goals, tasks, tz }: { goals: GoalView[]; tasks: Task
           <ul className="mt-3 grid gap-1">{loose.map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>
         </section>
       )}
+      </div>
+      <UpNext tasks={tasks} tz={tz} />
+      </div>
 
       {dialog && <GoalDialog mode={dialog} goals={goals} onClose={() => setDialog(null)} />}
       <UndoBar value={undo} onClose={() => setUndo(null)} />
@@ -134,6 +139,25 @@ function GoalBranch({ goal: g, goals, tasks, tz, depth, onEdit, onAddChild, onAr
   );
 }
 
+/** Right-hand column on wide screens (below the ladder on narrow ones): overdue and due-this-week tasks. */
+function UpNext({ tasks, tz }: { tasks: TaskView[]; tz: string }) {
+  const [now] = useState(() => Date.now());
+  const soon = tasks
+    .filter((t) => t.status !== "done" && t.dueAt && new Date(t.dueAt).getTime() < now + 7 * 86400000)
+    .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+  return (
+    <aside aria-labelledby="upnext" className="self-start rounded-[var(--radius)] border border-line bg-surface p-5 xl:sticky xl:top-8">
+      <h2 id="upnext" className="font-display text-lg font-semibold">Up next</h2>
+      <p className="mt-1 text-sm text-muted">Overdue and due in the next 7 days.</p>
+      {soon.length === 0
+        ? <p className="mt-4 text-muted">Nothing due this week. Add a date to a task and it shows up here.</p>
+        : <ul className="mt-3 grid gap-1">{soon.map((t) => <TaskRow key={t.id} task={t} tz={tz} />)}</ul>}
+      <p className="mt-5 border-t border-line pt-4 text-sm text-muted">{doneCount} of {tasks.length} tasks done in total.</p>
+    </aside>
+  );
+}
+
 export function TaskRow({ task: t, tz }: { task: TaskView; tz: string }) {
   const [done, setDone] = useState(t.status === "done");
   const [, start] = useTransition();
@@ -144,7 +168,7 @@ export function TaskRow({ task: t, tz }: { task: TaskView; tz: string }) {
       <Link href={`/tasks/${t.id}`} className="min-h-11 flex-1 py-2 hover:underline">
         <span className={done ? "text-muted line-through" : undefined}>{t.title || "Untitled task"}</span>
         {t.dueAt && (
-          <span className={`ml-2 text-sm ${overdue ? "text-danger" : "text-muted"}`}>
+          <span className={`ml-2 inline-block text-sm whitespace-nowrap ${overdue ? "text-danger" : "text-muted"}`}>
             {overdue ? "Overdue, " : ""}{formatDue(new Date(t.dueAt), t.hasTime, tz)}
           </span>
         )}

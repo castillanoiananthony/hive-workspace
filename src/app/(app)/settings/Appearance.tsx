@@ -2,7 +2,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { HexProgress } from "@/components/brand/HexProgress";
 import { applyTheme } from "@/lib/apply-theme";
-import { PRESETS, type Mode, type PresetId, type ThemeSettings } from "@/lib/themes";
+import { PRESETS, TEXT_SIZES, type Mode, type PresetId, type TextSize, type ThemeSettings } from "@/lib/themes";
 import { saveTheme } from "../actions";
 
 const MODES: { id: Mode; label: string }[] = [
@@ -48,6 +48,19 @@ export function Appearance({ initial }: { initial: ThemeSettings }) {
             </button>
           ))}
         </div>
+      </fieldset>
+
+      <fieldset className="mt-6">
+        <legend className="mb-2 font-medium">Text size</legend>
+        <div role="radiogroup" aria-label="Text size" className="flex flex-wrap gap-2">
+          {(Object.keys(TEXT_SIZES) as TextSize[]).map((id, i) => (
+            <button key={id} type="button" role="radio" aria-checked={(s.textSize ?? "m") === id} onClick={() => update({ textSize: id })} className={radio}>
+              <span aria-hidden className="mr-2 font-display font-semibold" style={{ fontSize: `${0.85 + i * 0.15}em` }}>Aa</span>
+              {TEXT_SIZES[id].label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-muted">Makes all text, buttons and spacing bigger or smaller on every page.</p>
       </fieldset>
 
       <fieldset className="mt-6">

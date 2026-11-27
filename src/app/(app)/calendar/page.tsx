@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Calendar" };
 
 export default function CalendarPage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-10">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
       <Suspense fallback={<p className="text-muted">Loading your calendar…</p>}>
         <Cal />
       </Suspense>
