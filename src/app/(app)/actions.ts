@@ -54,7 +54,7 @@ export async function saveTheme(settings: ThemeSettings) {
 
 export async function signOut() {
   await auth.api.signOut({ headers: await headers() });
-  redirect("/login");
+  redirect("/signin");
 }
 
 /** The name teammates see in Buzz emails ("Ian assigned you a task"). */

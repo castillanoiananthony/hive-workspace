@@ -210,7 +210,7 @@ export async function sendInvites(memberIds: string[], inviter: string) {
     if (!logId) continue;
     const unsub = await unsubscribeLinks(r.m.id);
     const hasAccount = Boolean(r.m.userId);
-    const props = { app: app(), team: r.t.name, teamColor: r.t.color, inviter, memberName: r.m.name, hasAccount, url: hasAccount ? `${app()}/hive/${r.t.id}` : `${app()}/login`, unsubscribeUrl: unsub.page };
+    const props = { app: app(), team: r.t.name, teamColor: r.t.color, inviter, memberName: r.m.name, hasAccount, url: hasAccount ? `${app()}/hive/${r.t.id}` : `${app()}/signin`, unsubscribeUrl: unsub.page };
     await deliver(logId, r.m.email, `${inviter} added you to ${r.t.name}`, createElement(InviteEmail, props), inviteText(props), unsub.oneClick);
   }
 }

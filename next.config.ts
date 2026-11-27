@@ -7,7 +7,10 @@ const nextConfig: NextConfig = {
   experimental: { serverActions: { bodySizeLimit: "4mb" } },
   // one address for everyone, so sign-in cookies and links all live on hive-workspace.com
   async redirects() {
-    return [{ source: "/:path*", has: [{ type: "host", value: "www.hive-workspace.com" }], destination: "https://hive-workspace.com/:path*", permanent: true }];
+    return [
+      { source: "/:path*", has: [{ type: "host", value: "www.hive-workspace.com" }], destination: "https://hive-workspace.com/:path*", permanent: true },
+      { source: "/login", destination: "/signin", permanent: true }, // sign-in moved; query strings (e.g. ?error=) carry over
+    ];
   },
   // Baseline browser protections for every page. (No CSP yet: the theme boot script is inline; add one with nonces if needed.)
   async headers() {
