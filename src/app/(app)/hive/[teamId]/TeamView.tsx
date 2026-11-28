@@ -16,7 +16,9 @@ import { Vault, type VaultLink } from "./Vault";
 import { Board } from "./TeamTasks";
 import { Activity, type DayT } from "./Activity";
 import { HiveCalendar, type CalTask } from "../../calendar/HiveCalendar";
-import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT, type ContributionT, type HiveMilestoneT, type ChecklistT } from "./types";
+import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT, type ContributionT, type HiveMilestoneT, type ChecklistT, type StreamTagT, type NoteT, type CriterionT } from "./types";
+import { Standups } from "./Standups";
+import { WorkingNow } from "./WorkingNow";
 import { Countdown, Plan } from "./Plan";
 import { TestLog, type TestFieldT, type TestRunT } from "./TestLog";
 import { setArchived } from "../dev-actions";
@@ -27,11 +29,11 @@ type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite" | "announce" | "remind0" | "help" | "daily" | "subtask"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; hiveMilestones?: HiveMilestoneT[]; checklists?: ChecklistT[]; testFields?: TestFieldT[]; testRuns?: TestRunT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; hiveMilestones?: HiveMilestoneT[]; checklists?: ChecklistT[]; streams?: StreamTagT[]; notes?: NoteT[]; criteria?: CriterionT[]; testFields?: TestFieldT[]; testRuns?: TestRunT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
-  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "plan", label: "Milestones" }, { id: "tests", label: "Tests" }, { id: "calendar", label: "Calendar" }, { id: "activity", label: "Activity" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
+  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "plan", label: "Milestones" }, { id: "tests", label: "Tests" }, { id: "standups", label: "Standups" }, { id: "calendar", label: "Calendar" }, { id: "activity", label: "Activity" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
   { id: "templates", label: "Templates", need: "templates" }, { id: "log", label: "Email log", need: "log" }, { id: "settings", label: "Team settings", need: "settings" },
 ];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -69,6 +71,7 @@ export function TeamView(props: Props) {
           {leader && <button type="button" onClick={() => setArchived(team.id, false)} className="min-h-10 rounded-[var(--radius)] border border-accent-edge/70 px-3 text-sm font-medium text-accent-text hover:bg-accent/10">Bring it back</button>}
         </div>
       )}
+      <WorkingNow team={team} me={me} members={members} />
       {props.colonyInfo && (
         <div className="mt-6 flex flex-wrap items-center gap-2 rounded-[calc(var(--radius)*2)] border border-line bg-surface px-4 py-3 text-sm">
           <span className="text-muted">Swarm in <Link href={`/colony/${props.colonyInfo.id}`} className="font-medium text-ink underline underline-offset-4">{props.colonyInfo.name}</Link>.</span>
@@ -84,10 +87,11 @@ export function TeamView(props: Props) {
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-6">
         {tab === "tests" && <TestLog team={team} me={me} members={members} fields={props.testFields ?? []} runs={props.testRuns ?? []} />}
-        {tab === "plan" && <Plan team={team} me={me} members={members} milestones={props.hiveMilestones ?? []} checklists={props.checklists ?? []} />}
+        {tab === "plan" && <Plan team={team} me={me} members={members} milestones={props.hiveMilestones ?? []} checklists={props.checklists ?? []} criteria={props.criteria ?? []} tasks={tasks} />}
+        {tab === "standups" && <Standups team={team} me={me} members={members} notes={props.notes ?? []} tasks={tasks} tz={props.tz} />}
         {tab === "comb" && <><Countdown milestones={props.hiveMilestones ?? []} hourly={team.kind === "hackathon"} /></>}
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
-        {tab === "board" && <Board {...props} me={me} onRoster={() => setTab("members")} />}
+        {tab === "board" && <Board {...props} me={me} streams={props.streams ?? []} onRoster={() => setTab("members")} />}
         {tab === "calendar" && (props.calendar.length ? <HiveCalendar tasks={props.calendar} tz={props.tz} editable={has(me, "tasks")} embedded /> : <p className="rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">No team tasks have a due date yet. Give one a date and it shows up here.</p>)}
         {tab === "activity" && <Activity team={team} tasks={tasks} assigned={props.assigned} members={members} days={props.days} logs={props.logs} tz={props.tz} contributions={props.contributions} />}
         {tab === "vault" && <Vault team={team} links={props.links} members={members} me={me} />}

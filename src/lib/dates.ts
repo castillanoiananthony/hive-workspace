@@ -50,3 +50,6 @@ export function periodFor(level: "year" | "month" | "week", at: Date, tz: string
 
 /** True when the moment has already passed (null: no date, so never). */
 export const isPast = (d: Date | null) => Boolean(d && d.getTime() < Date.now());
+
+/** True if the moment was within the last 3 hours ("Working now" lapses after that). */
+export const isRecent = (d: Date | null, ms = 3 * 3_600_000) => Boolean(d && Date.now() - d.getTime() < ms);

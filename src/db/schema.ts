@@ -131,6 +131,7 @@ export const task = pgTable("task", {
   testRunId: text("test_run_id").references((): AnyPgColumn => testRun.id, { onDelete: "set null" }), // bugs: the run that showed it
   decision: text("decision"), // decisions: what we chose
   rationale: text("rationale"), // decisions: why
+  streamId: text("stream_id").references((): AnyPgColumn => teamStream.id, { onDelete: "set null" }), // team workstream (Frontend, AI…)
   createdAt: created(),
   updatedAt: updated(),
 }, (t) => [index("task_owner_idx").on(t.ownerId), index("task_team_idx").on(t.teamId), index("task_goal_idx").on(t.goalId), index("task_due_idx").on(t.dueAt)]);
@@ -169,6 +170,9 @@ export const teamMember = pgTable("team_member", {
   parentId: text("parent_id").references((): AnyPgColumn => teamMember.id, { onDelete: "set null" }), // who they sit under
   position: integer("position").notNull().default(0), // order among people under the same person
   access: text("access").$type<"member" | "adviser" | "guest">().notNull().default("member"), // adviser: view + comment; guest: view tasks and The Comb
+  streams: jsonb("streams").$type<string[]>().notNull().default([]), // workstreams this person is on
+  workingAt: timestamp("working_at", { withTimezone: true }), // "Working now": last switched on or active
+  workingNote: text("working_note"),
   createdAt: created(),
 }, (t) => [uniqueIndex("member_team_email_uq").on(t.teamId, t.email)]);
 
@@ -267,6 +271,8 @@ export const teamLink = pgTable("team_link", {
   title: text("title").notNull(),
   url: text("url").notNull(),
   note: text("note"),
+  pinned: boolean("pinned").notNull().default(false),
+  category: text("category"), // Rules, API docs, Starter code, Judging criteria
   createdAt: created(),
 }, (t) => [index("team_link_team_idx").on(t.teamId)]);
 
@@ -463,3 +469,35 @@ export const testRun = pgTable("test_run", {
   isBest: boolean("is_best").notNull().default(false),
   createdAt: created(),
 }, (t) => [index("test_run_team_idx").on(t.teamId, t.ranAt)]);
+
+// Workstreams a hive defines (Frontend, Backend, AI/Vision, Hardware, Pitch/Docs…).
+export const teamStream = pgTable("team_stream", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  position: integer("position").notNull().default(0),
+}, (t) => [index("team_stream_team_idx").on(t.teamId)]);
+
+// Standup / meeting notes; "@Name do X by Friday" lines become tasks.
+export const meetingNote = pgTable("meeting_note", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  memberId: text("member_id").references(() => teamMember.id, { onDelete: "set null" }),
+  body: text("body").notNull(),
+  taskIds: jsonb("task_ids").$type<string[]>().notNull().default([]),
+  createdAt: created(),
+}, (t) => [index("meeting_note_team_idx").on(t.teamId, t.createdAt)]);
+
+// Hackathon judging criteria, each linked to the tasks that cover it.
+export const criterion = pgTable("criterion", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  position: integer("position").notNull().default(0),
+}, (t) => [index("criterion_team_idx").on(t.teamId)]);
+
+export const taskCriterion = pgTable("task_criterion", {
+  taskId: text("task_id").notNull().references(() => task.id, { onDelete: "cascade" }),
+  criterionId: text("criterion_id").notNull().references(() => criterion.id, { onDelete: "cascade" }),
+}, (t) => [primaryKey({ columns: [t.taskId, t.criterionId] })]);

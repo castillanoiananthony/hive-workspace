@@ -3,7 +3,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { countdown } from "@/lib/hive-templates";
 import { addChecklistItem, addHiveMilestone, addTeamChecklist, deleteChecklistItem, deleteHiveMilestone, deleteTeamChecklist, tickChecklistItem, updateChecklistItem, updateHiveMilestone } from "../dev-actions";
-import { has, nameOf, type ChecklistT, type HiveMilestoneT, type MeT, type MemberT, type TeamT } from "./types";
+import { has, nameOf, type ChecklistT, type CriterionT, type HiveMilestoneT, type MeT, type MemberT, type TaskT, type TeamT } from "./types";
+import { addCriteria, deleteCriterion, linkCriterion } from "../team-extras-actions";
+import Link from "next/link";
 
 const card = "rounded-[calc(var(--radius)*2)] border border-line bg-surface p-5";
 const field = "min-h-11 min-w-0 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge";
@@ -23,17 +25,18 @@ export function Countdown({ milestones, hourly }: { milestones: HiveMilestoneT[]
   const c = countdown(new Date(next.dueAt!).getTime() - now, hourly);
   const done = milestones.filter((m) => m.done).length;
   return (
-    <div role="timer" aria-live="off" className={`mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[calc(var(--radius)*2)] border-2 px-5 py-4 ${c.late ? "border-danger/70 bg-danger/10" : "border-accent-edge/70 bg-accent/10"}`}>
-      <span className="text-sm text-muted">Next milestone</span>
-      <span className="min-w-0 flex-1 font-display text-lg font-semibold">{next.title}</span>
-      <span className={`font-display text-2xl font-semibold tabular-nums ${c.late ? "text-danger" : "text-accent-text"}`}>{c.late ? `${c.text} late` : c.text}</span>
-      <span className="basis-full text-sm text-muted">Due {next.label}. {done} of {milestones.length} milestones done.</span>
+    <div role="timer" aria-live="off" className={`mb-5 grid gap-1 rounded-[calc(var(--radius)*2)] border-2 px-5 py-4 ${c.late ? "border-danger/70 bg-danger/10" : "border-accent-edge/70 bg-accent/10"}`}>
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div className="min-w-0"><span className="block text-sm text-muted">Next milestone</span><span className="block font-display text-lg font-semibold [overflow-wrap:anywhere]">{next.title}</span></div>
+        <span className={`font-display text-2xl font-semibold whitespace-nowrap tabular-nums ${c.late ? "text-danger" : "text-accent-text"}`}>{c.late ? `${c.text} late` : c.text}</span>
+      </div>
+      <span className="text-sm text-muted">Due {next.label}. {done} of {milestones.length} milestones done.</span>
     </div>
   );
 }
 
 /** The Milestones tab: milestones and the team's checklists (each item can have one owner). */
-export function Plan({ team, me, members, milestones, checklists }: { team: TeamT; me: MeT; members: MemberT[]; milestones: HiveMilestoneT[]; checklists: ChecklistT[] }) {
+export function Plan({ team, me, members, milestones, checklists, criteria = [], tasks = [] }: { team: TeamT; me: MeT; members: MemberT[]; milestones: HiveMilestoneT[]; checklists: ChecklistT[]; criteria?: CriterionT[]; tasks?: TaskT[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -125,6 +128,32 @@ export function Plan({ team, me, members, milestones, checklists }: { team: Team
           </div>
         )}
         {checklists.length === 0 && !edit && <p className="text-sm text-muted">No checklists yet.</p>}
+        {(criteria.length > 0 || (edit && team.kind !== "project")) && (
+          <section aria-labelledby="crit-h" className={card}>
+            <h2 id="crit-h" className="font-display text-lg font-semibold">Judging criteria</h2>
+            <p className="text-sm text-muted">Link tasks to each criterion so nothing the judges look for is missed.</p>
+            <ul className="mt-3 grid gap-2">
+              {criteria.map((c) => {
+                const linked = tasks.filter((t) => c.taskIds.includes(t.id)), free = tasks.filter((t) => !c.taskIds.includes(t.id));
+                return (
+                  <li key={c.id} className={`grid gap-2 rounded-[var(--radius)] border p-3 ${linked.length ? "border-line" : "border-danger/60"}`}>
+                    <div className="flex items-start gap-2"><p className="min-w-0 flex-1 font-medium">{c.text}</p>{edit && <button type="button" aria-label={`Remove “${c.text}”`} disabled={pending} onClick={() => run(() => deleteCriterion(c.id))} className="grid size-9 shrink-0 place-items-center rounded-full border border-line text-muted hover:text-danger">×</button>}</div>
+                    {linked.length === 0 && <p className="text-sm font-medium text-danger">Nothing covers this yet</p>}
+                    {linked.length > 0 && <p className="flex flex-wrap gap-1.5">{linked.map((t) => <span key={t.id} className="inline-flex items-center gap-1 rounded-full border border-line py-0.5 pr-1 pl-2 text-sm"><Link href={`/tasks/${t.id}`} className="hover:underline">{t.title || "Untitled task"}</Link>{edit && <button type="button" aria-label={`Unlink ${t.title}`} onClick={() => run(() => linkCriterion(c.id, t.id, false))} className="grid size-6 place-items-center rounded-full text-muted hover:text-danger">×</button>}</span>)}</p>}
+                    {edit && free.length > 0 && <><label className="sr-only" htmlFor={`cr-${c.id}`}>Link a task to “{c.text}”</label><select id={`cr-${c.id}`} value="" onChange={(e) => e.target.value && run(() => linkCriterion(c.id, e.target.value, true))} className={`${field} min-h-10 text-sm`}><option value="">+ Link a task…</option>{free.map((t) => <option key={t.id} value={t.id}>{t.title || "Untitled task"}</option>)}</select></>}
+                  </li>
+                );
+              })}
+            </ul>
+            {edit && (
+              <form className="mt-3 grid gap-2" onSubmit={(e) => { e.preventDefault(); const form = e.currentTarget, v = String(new FormData(form).get("c")); run(async () => { await addCriteria(team.id, v); form.reset(); }); }}>
+                <label htmlFor="crit-add" className="text-sm font-medium">Paste the criteria, one per line</label>
+                <textarea id="crit-add" name="c" rows={3} required placeholder={"Impact\nCreativity\nTechnical difficulty\nPresentation"} className={`${field} py-2`} />
+                <button disabled={pending} className={`${outline} justify-self-start`}>Add criteria</button>
+              </form>
+            )}
+          </section>
+        )}
         <p role="status" className="text-sm text-danger">{msg}</p>
       </div>
     </div>

@@ -16,7 +16,7 @@ const COLS = [
 type Status = (typeof COLS)[number]["id"];
 
 /** Four columns. Drag a card by its handle (mouse or finger) or use its "Move to" menu. Done needs an approver. */
-export function Kanban({ team, tasks, members, assigned, me, tz }: { team: TeamT; tasks: TaskT[]; members: MemberT[]; assigned: AssignedT[]; me: MeT; tz: string }) {
+export function Kanban({ team, tasks, members, assigned, me, tz, streams = [] }: { team: TeamT; tasks: TaskT[]; members: MemberT[]; assigned: AssignedT[]; me: MeT; tz: string; streams?: { id: string; name: string; color: string }[] }) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Status>>({});
   const [msg, setMsg] = useState<string | null>(null);
@@ -68,6 +68,7 @@ export function Kanban({ team, tasks, members, assigned, me, tz }: { team: TeamT
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-11 text-sm text-muted">
                       <TypeTag type={t.type} />
+                      {(() => { const st = streams.find((x) => x.id === t.streamId); return st ? <span className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-xs font-semibold"><span aria-hidden className="size-2 rounded-full" style={{ background: st.color }} />{st.name}</span> : null; })()}
                       <ImportanceTag level={t.importance} colors={team.importanceColors} />
                       {t.dueAt && <span>{formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}
                       {t.subtasks && t.subtasks.total > 0 && <span>{t.subtasks.done}/{t.subtasks.total} subtasks</span>}

@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, subject, task, taskLink, teamMember, testRun } from "@/db/schema";
+import { assignment, checklistItem, goal, subject, task, taskLink, teamMember, teamStream, testRun } from "@/db/schema";
 import { newToken } from "@/lib/tokens";
 import { requirePerm, teamAccess } from "@/lib/teams";
 import { can } from "@/lib/hive-perms";
@@ -49,7 +49,9 @@ async function devFields(teamId: string, doc: TaskDoc) {
     testRunId = r?.id ?? null;
   }
   const t = (s: unknown, n: number) => (typeof s === "string" ? s.trim().slice(0, n) || null : null);
+  const [st] = doc.streamId ? await db.select({ id: teamStream.id }).from(teamStream).where(and(eq(teamStream.id, String(doc.streamId)), eq(teamStream.teamId, teamId))) : [];
   return {
+    streamId: st?.id ?? null,
     type,
     severity: type === "bug" ? (["low", "medium", "high", "critical"] as const).find((x) => x === doc.severity) ?? null : null,
     steps: type === "bug" ? t(doc.steps, 4000) : null, testRunId,
@@ -169,7 +171,7 @@ export type TaskDoc = {
   subjectId?: string | null; // personal tasks only
   isExam?: boolean;
   howTo?: unknown; // team tasks: "How to do it"
-  type?: "task" | "bug" | "feature" | "decision"; severity?: string | null; steps?: string | null; testRunId?: string | null; decision?: string | null; rationale?: string | null; // team dev tasks
+  type?: "task" | "bug" | "feature" | "decision"; severity?: string | null; steps?: string | null; testRunId?: string | null; decision?: string | null; rationale?: string | null; streamId?: string | null; // team dev tasks
   assignees?: string[]; // team tasks: roster member ids
 };
 

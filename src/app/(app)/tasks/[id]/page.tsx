@@ -3,7 +3,7 @@ import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, subject, subtask, task, taskComment, taskLink, team, teamMember, testRun } from "@/db/schema";
+import { assignment, checklistItem, goal, subject, subtask, task, taskComment, taskLink, team, teamMember, teamStream, testRun } from "@/db/schema";
 import { formatDue, utcToZoned } from "@/lib/dates";
 import { docToHtml } from "@/lib/doc-to-html";
 import { can, canComment } from "@/lib/hive-perms";
@@ -60,6 +60,7 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
       }
     : null;
   const runs = t.teamId ? await db.select({ id: testRun.id, at: testRun.ranAt, version: testRun.version, result: testRun.result }).from(testRun).where(eq(testRun.teamId, t.teamId)).orderBy(desc(testRun.ranAt)).limit(50) : [];
+  const streamOptions = t.teamId ? await db.select({ id: teamStream.id, name: teamStream.name }).from(teamStream).where(eq(teamStream.teamId, t.teamId)).orderBy(asc(teamStream.position)) : [];
   const runOptions = runs.map((r) => ({ id: r.id, label: `${formatDue(r.at, true, me.timezone)}${r.version ? `, ${r.version.replace(/^https?:\/\/(www\.)?/, "").slice(0, 40)}` : ""}${r.result ? `, ${r.result}` : ""}` }));
   const [items, links, goals, subjects] = await Promise.all([
     db.select().from(checklistItem).where(eq(checklistItem.taskId, id)).orderBy(asc(checklistItem.position)),
@@ -75,13 +76,14 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
       extras={extras}
       subjects={subjects}
       runs={runOptions}
+      streams={streamOptions}
       team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, importanceColors: teamInfo.importanceColors ?? null, canApprove: access ? can(access.me, "approve") : false, members: teamInfo.members.filter((m) => m.access === "member" || teamInfo.assigned.some((x) => x.memberId === m.id)).map(({ id, name }) => ({ id, name })), done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
       initial={{
         title: t.title, notes: t.notes ?? null, status: t.status, importance: t.importance, subjectId: t.subjectId, isExam: t.isExam, goalId: t.goalId,
         dueDate: due?.date ?? null, dueTime: t.hasTime ? due!.time : null,
         checklist: items.map((c) => ({ text: c.text, done: c.done })),
         links: links.map((l) => ({ title: l.title, url: l.url })),
-        ...(teamInfo ? { howTo: t.howTo ?? null, assignees: teamInfo.assigned.map((a) => a.memberId), type: t.type, severity: t.severity, steps: t.steps, testRunId: t.testRunId, decision: t.decision, rationale: t.rationale } : {}),
+        ...(teamInfo ? { howTo: t.howTo ?? null, assignees: teamInfo.assigned.map((a) => a.memberId), type: t.type, severity: t.severity, steps: t.steps, testRunId: t.testRunId, decision: t.decision, rationale: t.rationale, streamId: t.streamId } : {}),
       }}
     />
   );

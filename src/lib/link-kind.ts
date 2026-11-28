@@ -18,3 +18,6 @@ export function linkKind(url: string): Kind {
   if (host.endsWith("onedrive.live.com") || host.endsWith("sharepoint.com") || host === "1drv.ms") return "onedrive";
   return "other";
 }
+
+/** Resource Library categories a hive can file links under. */
+export const VAULT_CATEGORIES = ["Rules", "API docs", "Starter code", "Judging criteria", "Design", "Other"];

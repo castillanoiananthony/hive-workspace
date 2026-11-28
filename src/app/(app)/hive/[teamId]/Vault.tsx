@@ -2,11 +2,12 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Bee } from "@/components/brand/Bee";
-import { KINDS, linkKind, type Kind } from "@/lib/link-kind";
+import { KINDS, linkKind, VAULT_CATEGORIES, type Kind } from "@/lib/link-kind";
+import { setLinkMeta } from "../team-extras-actions";
 import { addVaultLink, deleteVaultLink } from "../actions";
 import { has, nameOf, type MeT, type MemberT, type TeamT } from "./types";
 
-export type VaultLink = { id: string; title: string; url: string; note: string | null; memberId: string | null; at: string };
+export type VaultLink = { id: string; title: string; url: string; note: string | null; memberId: string | null; at: string; pinned?: boolean; category?: string | null };
 const field = "min-h-11 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge";
 
 /** Hive Vault: the team's shared links, grouped by where they live (Drive, GitHub, Docs…). */
@@ -17,7 +18,10 @@ export function Vault({ team, links, members, me }: { team: TeamT; links: VaultL
   const [pending, start] = useTransition();
   const canAdd = has(me, "vault");
   const who = (id: string | null) => { const m = members.find((x) => x.id === id); return m ? nameOf(m) : "a former member"; };
-  const shown = links.filter((l) => !q.trim() || `${l.title} ${l.note ?? ""} ${l.url}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const [cat, setCat] = useState("");
+  const shown = links.filter((l) => (!q.trim() || `${l.title} ${l.note ?? ""} ${l.url}`.toLowerCase().includes(q.trim().toLowerCase())) && (!cat || l.category === cat));
+  const pinned = shown.filter((l) => l.pinned);
+  const cats = VAULT_CATEGORIES.filter((c) => links.some((l) => l.category === c));
   const groups = (Object.keys(KINDS) as Kind[]).map((k) => ({ k, items: shown.filter((l) => linkKind(l.url) === k) })).filter((g) => g.items.length);
 
   return (
@@ -30,6 +34,17 @@ export function Vault({ team, links, members, me }: { team: TeamT; links: VaultL
           </div>
           {links.length > 4 && (<><label htmlFor="vault-q" className="sr-only">Search the Vault</label><input id="vault-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search links" className={`${field} w-full sm:w-64`} /></>)}
         </div>
+        {cats.length > 0 && (
+          <div role="radiogroup" aria-label="Category" className="mt-4 flex flex-wrap gap-1.5">
+            {["", ...cats].map((c) => <button key={c || "all"} type="button" role="radio" aria-checked={cat === c} onClick={() => setCat(c)} className="min-h-9 rounded-full border border-line px-3 text-sm font-medium hover:border-accent-edge aria-checked:border-accent-edge aria-checked:bg-raised">{c || "All"}</button>)}
+          </div>
+        )}
+        {pinned.length > 0 && (
+          <section aria-labelledby="vault-pinned" className="mt-6">
+            <h3 id="vault-pinned" className="mb-2 font-semibold">📌 Pinned</h3>
+            <ul className="grid gap-2">{pinned.map((l) => <li key={l.id} className="flex min-w-0 items-center gap-3 rounded-[var(--radius)] border border-accent-edge/60 bg-surface px-4 py-3"><a href={l.url} target="_blank" rel="noreferrer noopener" className="min-w-0 flex-1 font-medium break-words hover:underline">{l.title}<span className="sr-only"> (opens in a new tab)</span></a>{l.category && <span className="rounded-full border border-line px-2 py-0.5 text-xs font-semibold">{l.category}</span>}</li>)}</ul>
+          </section>
+        )}
         {links.length === 0 ? (
           <div className="mt-6 grid justify-items-center gap-2 rounded-[var(--radius)] border border-dashed border-line p-8 text-center">
             <Bee pose="idle" size={80} />
@@ -50,8 +65,10 @@ export function Vault({ team, links, members, me }: { team: TeamT; links: VaultL
                         {l.note && <p className="mt-0.5 text-sm">{l.note}</p>}
                         <p className="mt-0.5 truncate text-sm text-muted">{new URL(l.url).hostname.replace(/^www\./, "")}, added by {who(l.memberId)}</p>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         <a href={l.url} target="_blank" rel="noreferrer noopener" className="inline-flex min-h-11 items-center rounded-[var(--radius)] border border-line px-3 text-sm font-medium hover:border-accent-edge">Open</a>
+                        {canAdd && <button type="button" aria-pressed={Boolean(l.pinned)} aria-label={l.pinned ? `Unpin ${l.title}` : `Pin ${l.title}`} title={l.pinned ? "Unpin" : "Pin to the top"} disabled={pending} onClick={() => start(async () => { await setLinkMeta(l.id, { pinned: !l.pinned }); router.refresh(); })} className={`grid size-11 place-items-center rounded-[var(--radius)] border ${l.pinned ? "border-accent-edge text-accent-text" : "border-line text-muted hover:text-ink"}`}>📌</button>}
+                        {canAdd && <><label className="sr-only" htmlFor={`cat-${l.id}`}>Category for {l.title}</label><select id={`cat-${l.id}`} value={l.category ?? ""} disabled={pending} onChange={(e) => start(async () => { await setLinkMeta(l.id, { category: e.target.value || null }); router.refresh(); })} className="min-h-11 rounded-[var(--radius)] border border-line bg-bg px-2 text-sm"><option value="">No category</option>{VAULT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></>}
                         {canAdd && <button type="button" disabled={pending} onClick={() => { if (confirm(`Remove “${l.title}” from the Vault?`)) start(async () => { await deleteVaultLink(l.id); router.refresh(); }); }} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Remove</button>}
                       </div>
                     </li>

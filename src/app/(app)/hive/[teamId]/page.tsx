@@ -5,11 +5,11 @@ import { Suspense } from "react";
 import { BackButton } from "@/components/app/BackButton";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { db } from "@/db";
-import { assignment, colony, combPost, contribution, hiveMilestone, testField, testRun, milestone, teamChecklist, teamChecklistItem, progressLog, subtask, taskLink, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
+import { assignment, colony, combPost, contribution, criterion, hiveMilestone, meetingNote, taskCriterion, teamStream, testField, testRun, milestone, teamChecklist, teamChecklistItem, progressLog, subtask, taskLink, emailLog, task, teamLink, teamMember, teamRole, template, userImage } from "@/db/schema";
 import { ALL_PERMS, can } from "@/lib/hive-perms";
 import { requireUser } from "@/lib/session";
 import { lastDays } from "@/lib/activity";
-import { formatDue } from "@/lib/dates";
+import { formatDue, isRecent } from "@/lib/dates";
 import { importanceOf } from "@/lib/importance";
 import { utcToZoned } from "@/lib/dates";
 import { ensureRoles, teamAccess } from "@/lib/teams";
@@ -38,7 +38,7 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
   const [members, roles, tasks, templates, log, posts, links] = await Promise.all([
     db.select().from(teamMember).where(eq(teamMember.teamId, teamId)).orderBy(asc(teamMember.position), asc(teamMember.createdAt)),
     db.select().from(teamRole).where(eq(teamRole.teamId, teamId)).orderBy(asc(teamRole.position), asc(teamRole.createdAt)),
-    db.select({ id: task.id, title: task.title, status: task.status, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance, type: task.type, createdAt: task.createdAt }).from(task).where(eq(task.teamId, teamId)).orderBy(asc(task.dueAt), asc(task.createdAt)),
+    db.select({ id: task.id, title: task.title, status: task.status, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance, type: task.type, streamId: task.streamId, createdAt: task.createdAt }).from(task).where(eq(task.teamId, teamId)).orderBy(asc(task.dueAt), asc(task.createdAt)),
     can(mine, "templates") ? db.select().from(template).where(eq(template.teamId, teamId)).orderBy(asc(template.createdAt)) : Promise.resolve([]),
     can(mine, "log")
       ? db.select({ id: emailLog.id, kind: emailLog.kind, recipient: emailLog.recipient, status: emailLog.status, error: emailLog.error, at: emailLog.createdAt, sentAt: emailLog.sentAt, name: teamMember.name, task: task.title })
@@ -70,6 +70,12 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
     db.select().from(milestone).where(eq(milestone.colonyId, t.colonyId)).orderBy(asc(milestone.dueAt)),
   ]) : null;
   const milestones = classInfo ? classInfo[1].map((m) => { const z = utcToZoned(m.dueAt, me.timezone); return { id: m.id, title: m.title, date: z.date, label: new Intl.DateTimeFormat("en", { timeZone: me.timezone, month: "short", day: "numeric" }).format(m.dueAt) }; }) : [];
+  const [streams, notes, crit, critLinks] = await Promise.all([
+    db.select().from(teamStream).where(eq(teamStream.teamId, teamId)).orderBy(asc(teamStream.position)),
+    db.select().from(meetingNote).where(eq(meetingNote.teamId, teamId)).orderBy(desc(meetingNote.createdAt)).limit(30),
+    db.select().from(criterion).where(eq(criterion.teamId, teamId)).orderBy(asc(criterion.position)),
+    db.select({ taskId: taskCriterion.taskId, criterionId: taskCriterion.criterionId }).from(taskCriterion).innerJoin(criterion, eq(taskCriterion.criterionId, criterion.id)).where(eq(criterion.teamId, teamId)),
+  ]);
   const [tFields, tRuns] = await Promise.all([
     db.select().from(testField).where(eq(testField.teamId, teamId)).orderBy(asc(testField.position)),
     db.select().from(testRun).where(eq(testRun.teamId, teamId)).orderBy(desc(testRun.ranAt)).limit(300),
@@ -87,6 +93,9 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
     <TeamView
       days={days}
       hiveMilestones={hiveMilestones}
+      streams={streams.map((x) => ({ id: x.id, name: x.name, color: x.color }))}
+      notes={notes.map((n) => ({ id: n.id, memberId: n.memberId, body: n.body, at: n.createdAt.toISOString(), label: formatDue(n.createdAt, true, me.timezone), taskIds: n.taskIds }))}
+      criteria={crit.map((c) => ({ id: c.id, text: c.text, taskIds: critLinks.filter((l) => l.criterionId === c.id).map((l) => l.taskId) }))}
       testFields={tFields.map((f) => ({ id: f.id, name: f.name, unit: f.unit, higherIsBetter: f.higherIsBetter }))}
       testRuns={tRuns.map((r) => ({ id: r.id, memberId: r.memberId, at: r.ranAt.toISOString(), label: formatDue(r.ranAt, true, me.timezone), version: r.version, result: r.result, notes: r.notes, values: r.values, isBest: r.isBest }))}
       checklists={checklists}
@@ -100,11 +109,12 @@ async function Team({ params }: { params: PageProps<"/hive/[teamId]">["params"] 
       members={members.map((m) => ({
         id: m.id, userId: m.userId, name: m.name, nickname: m.nickname, email: can(mine, "members") || m.id === mine.id ? m.email : null,
         joined: Boolean(m.userId), isAdmin: m.isAdmin, roleId: m.roleId, perms: m.isAdmin ? ALL_PERMS : m.perms, parentId: m.parentId, position: m.position,
-        avatar: avatarOf(m.userId), unsubscribed: Boolean(m.unsubscribedAt), access: m.access,
+        avatar: avatarOf(m.userId), unsubscribed: Boolean(m.unsubscribedAt), access: m.access, streams: m.streams,
+        working: m.workingAt && isRecent(m.workingAt) ? m.workingAt.toISOString() : null, workingNote: m.workingNote,
       }))}
-      links={links.map((l) => ({ id: l.id, title: l.title, url: l.url, note: l.note, memberId: l.memberId, at: l.createdAt.toISOString() }))}
+      links={links.map((l) => ({ id: l.id, title: l.title, url: l.url, note: l.note, memberId: l.memberId, at: l.createdAt.toISOString(), pinned: l.pinned, category: l.category }))}
       roles={roles.map((r) => ({ id: r.id, name: r.name, perms: r.perms, isLeader: r.isLeader }))}
-      tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime, importance: x.importance, type: x.type, subtasks: { total: Number(subCounts.find((c) => c.taskId === x.id)?.total ?? 0), done: Number(subCounts.find((c) => c.taskId === x.id)?.done ?? 0) }, links: Number(linkCounts.find((c) => c.taskId === x.id)?.n ?? 0) }))}
+      tasks={tasks.map((x) => ({ id: x.id, title: x.title, status: x.status, dueAt: x.dueAt?.toISOString() ?? null, hasTime: x.hasTime, importance: x.importance, type: x.type, streamId: x.streamId, subtasks: { total: Number(subCounts.find((c) => c.taskId === x.id)?.total ?? 0), done: Number(subCounts.find((c) => c.taskId === x.id)?.done ?? 0) }, links: Number(linkCounts.find((c) => c.taskId === x.id)?.n ?? 0) }))}
       assigned={assigned.map((a) => ({ ...a, doneAt: a.doneAt?.toISOString() ?? null }))}
       stream={[
         ...posts.map((p) => ({ kind: "post" as const, id: p.id, at: p.createdAt.toISOString(), memberId: p.memberId, body: p.body, hidden: Boolean(p.hiddenAt) })),

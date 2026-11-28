@@ -20,7 +20,7 @@ const STATUS: { id: TaskDoc["status"]; label: string; team?: boolean }[] = [
 
 type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; canApprove: boolean; members: { id: string; name: string }[]; done: string[]; notified: string[] };
 
-export function TaskEditor({ id, initial, goals, team, extras, subjects = [], runs = [] }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null; subjects?: { id: string; code: string; color: string }[]; runs?: { id: string; label: string }[] }) {
+export function TaskEditor({ id, initial, goals, team, extras, subjects = [], runs = [], streams = [] }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null; subjects?: { id: string; code: string; color: string }[]; runs?: { id: string; label: string }[]; streams?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [doc, setDoc] = useState<TaskDoc>(initial);
   const [save, setSave] = useState<Save>("saved");
@@ -172,6 +172,12 @@ export function TaskEditor({ id, initial, goals, team, extras, subjects = [], ru
                 ))}
               </div>
             </dd>
+          </>
+        )}
+        {team && streams.length > 0 && (
+          <>
+            <dt className="self-center text-sm text-muted"><label htmlFor="task-stream">Workstream</label></dt>
+            <dd><select id="task-stream" value={doc.streamId ?? ""} onChange={(e) => update({ streamId: e.target.value || null })} className={field}><option value="">None</option>{streams.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></dd>
           </>
         )}
         <dt className="self-center text-sm text-muted">Importance</dt>

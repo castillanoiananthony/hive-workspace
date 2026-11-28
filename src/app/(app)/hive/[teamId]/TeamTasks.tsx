@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
@@ -10,7 +11,9 @@ import { newTeamTask } from "../actions";
 import { Kanban } from "./Kanban";
 import { MemberAvatar } from "./MemberAvatar";
 import { Bar, fmtDay, pctOf } from "./MyProgress";
-import { has, nameOf, type AssignedT, type ContributionT, type LogT, type MeT, type MemberT, type TaskT, type TeamT } from "./types";
+import { has, nameOf, type AssignedT, type ContributionT, type LogT, type MeT, type MemberT, type StreamTagT, type TaskT, type TeamT } from "./types";
+import { Modal } from "@/components/app/Modal";
+import { addStream, deleteStream, setMyStreams } from "../team-extras-actions";
 import { WaggleButton } from "@/components/app/WaggleButton";
 import { waggle } from "@/lib/waggle";
 
@@ -18,15 +21,26 @@ const btnPrimary = "min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibol
 const Chevron = () => <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden className="shrink-0 text-muted transition-transform group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>;
 
 /** The Tasks tab: your own parts first (with progress), then every team task as a card that opens to show each person. */
-export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster, contributions = [] }: { team: TeamT; members: MemberT[]; tasks: TaskT[]; assigned: AssignedT[]; logs: LogT[]; tz: string; me: MeT; onRoster: () => void; contributions?: ContributionT[] }) {
+export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster, contributions = [], streams = [] }: { team: TeamT; members: MemberT[]; tasks: TaskT[]; assigned: AssignedT[]; logs: LogT[]; tz: string; me: MeT; onRoster: () => void; contributions?: ContributionT[]; streams?: StreamTagT[] }) {
   const [now] = useState(() => Date.now());
   const [pending, start] = useTransition();
   const [view, setView] = useState<"list" | "board">("list");
+  const [streamF, setStreamF] = useState(""); // "", "mine", or a stream id
+  const [win, setWin] = useState<"all" | "week" | "6h">(team.kind === "hackathon" ? "all" : "all");
+  const [streamsOpen, setStreamsOpen] = useState(false);
   const others = members.filter((m) => !m.isAdmin);
   if (others.length === 0 && has(me, "members")) return <EmptyState pose="idle" title="Invite your teammates first" body="Add their emails or share the join link, then you can start assigning tasks." action={<button type="button" onClick={onRoster} className={btnPrimary}>Invite members</button>} />;
-  if (tasks.length === 0) return <EmptyState title="No team tasks yet" body={has(me, "tasks") ? "Make a task, pick who does it and add the steps under “How to do it”. They get it by email." : "When a task is assigned to you it shows up here."} action={has(me, "tasks") ? <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button> : undefined} />;
+  const noTasks = tasks.length === 0 ? <EmptyState title="No team tasks yet" body={has(me, "tasks") ? "Make a task, pick who does it and add the steps under “How to do it”. They get it by email." : "When a task is assigned to you it shows up here."} action={has(me, "tasks") ? <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button> : undefined} /> : null;
 
   const mine = tasks.filter((t) => assigned.some((a) => a.taskId === t.id && a.memberId === me.memberId));
+  const myStreams = members.find((m) => m.id === me.memberId)?.streams ?? [];
+  const shown = tasks.filter((t) => {
+    if (streamF === "mine" ? !(t.streamId && myStreams.includes(t.streamId)) : streamF && t.streamId !== streamF) return false;
+    if (win === "all") return true;
+    const d = t.dueAt ? new Date(t.dueAt).getTime() : null;
+    if (d === null || t.status === "done") return false;
+    return d - now <= (win === "6h" ? 6 * 3_600_000 : 7 * 86_400_000); // overdue ones stay in view
+  });
   const avg = (rows: AssignedT[]) => (rows.length ? Math.round(rows.reduce((s, a) => s + pctOf(a), 0) / rows.length) : null);
   const people = members.map((m) => ({ m, pct: avg(assigned.filter((a) => a.memberId === m.id)) })).filter((p) => p.pct !== null);
 
@@ -69,8 +83,23 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster, 
             ))}
           </div>
         </div>
-        {view === "board" ? <Kanban team={team} tasks={tasks} members={members} assigned={assigned} me={me} tz={tz} /> : <>
-        {tasks.map((t) => {
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="radiogroup" aria-label="Due" className="flex rounded-full border border-line bg-surface p-1">
+            {([["all", "All"], ["week", "This week"], ["6h", "Next 6 hours"]] as const).map(([v, l]) => <button key={v} type="button" role="radio" aria-checked={win === v} onClick={() => setWin(v)} className="min-h-9 rounded-full px-3 text-sm font-medium text-muted aria-checked:bg-raised aria-checked:text-ink">{l}</button>)}
+          </div>
+          {streams.length > 0 && (
+            <div role="radiogroup" aria-label="Workstream" className="flex flex-wrap gap-1.5">
+              {[{ id: "", name: "All streams", color: "" }, ...(myStreams.length ? [{ id: "mine", name: "My streams", color: "" }] : []), ...streams].map((st) => (
+                <button key={st.id || "all"} type="button" role="radio" aria-checked={streamF === st.id} onClick={() => setStreamF(st.id)} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-medium hover:border-accent-edge aria-checked:border-accent-edge aria-checked:bg-raised">{st.color && <span aria-hidden className="size-2.5 rounded-full" style={{ background: st.color }} />}{st.name}</button>
+              ))}
+            </div>
+          )}
+          <button type="button" onClick={() => setStreamsOpen(true)} className="min-h-9 rounded-full border border-line px-3 text-sm font-medium text-muted hover:border-accent-edge hover:text-ink">Workstreams</button>
+        </div>
+        <Modal open={streamsOpen} onClose={() => setStreamsOpen(false)} title="Workstreams"><StreamsManager team={team} me={me} streams={streams} mine={myStreams} /></Modal>
+        {noTasks ?? (view === "board" ? <Kanban team={team} tasks={shown} members={members} assigned={assigned} me={me} tz={tz} streams={streams} /> : <>
+        {shown.length === 0 && <p className="rounded-[var(--radius)] border border-dashed border-line p-6 text-center text-muted">No tasks match these filters.</p>}
+        {shown.map((t) => {
           const parts = assigned.filter((a) => a.taskId === t.id);
           const overall = avg(parts);
           const overdue = t.status !== "done" && t.dueAt && new Date(t.dueAt).getTime() < now;
@@ -112,9 +141,45 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster, 
             </details>
           );
         })}
-        </>}
+        </>)}
       </section>
     </div>
   );
 }
 
+
+/** The hive's workstreams (Frontend, Backend, AI…): the Leader or task managers add them; everyone picks their own. */
+function StreamsManager({ team, me, streams, mine }: { team: TeamT; me: MeT; streams: StreamTagT[]; mine: string[] }) {
+  const router = useRouter();
+  const [picked, setPicked] = useState(mine);
+  const [name, setName] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const manage = has(me, "tasks") && !team.archived;
+  const run = (fn: () => Promise<unknown>, ok?: string) => start(async () => { try { await fn(); setMsg(ok ?? null); router.refresh(); } catch (e) { setMsg(e instanceof Error ? e.message : "Couldn't save."); } });
+  return (
+    <div className="grid gap-4">
+      <p className="text-muted">Tag tasks with a workstream, then filter the board to yours.</p>
+      {streams.length > 0 && (
+        <fieldset className="grid gap-2"><legend className="mb-1 text-sm font-medium">Streams you&apos;re on</legend>
+          {streams.map((st) => (
+            <div key={st.id} className="flex items-center gap-3">
+              <label className="flex min-h-11 flex-1 items-center gap-3"><input type="checkbox" checked={picked.includes(st.id)} onChange={(e) => setPicked((x) => (e.target.checked ? [...x, st.id] : x.filter((y) => y !== st.id)))} className="size-5 accent-[var(--accent)]" /><span aria-hidden className="size-3 rounded-full" style={{ background: st.color }} />{st.name}</label>
+              {manage && <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete the ${st.name} stream? Its tasks stay, untagged.`)) run(() => deleteStream(st.id)); }} className="min-h-9 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger">Delete</button>}
+            </div>
+          ))}
+          <button type="button" disabled={pending} onClick={() => run(() => setMyStreams(team.id, picked), "Saved.")} className="min-h-11 justify-self-start rounded-[var(--radius)] bg-accent px-5 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60">Save my streams</button>
+        </fieldset>
+      )}
+      {manage && (
+        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); run(async () => { await addStream(team.id, name); setName(""); }); }}>
+          <label className="sr-only" htmlFor="new-stream">New workstream</label>
+          <input id="new-stream" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} placeholder="e.g. AI/Vision" className="min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge" />
+          <button disabled={pending || !name.trim()} className="min-h-11 rounded-[var(--radius)] border border-accent-edge/70 px-4 font-medium text-accent-text hover:bg-accent/10 disabled:opacity-60">Add</button>
+        </form>
+      )}
+      {!manage && streams.length === 0 && <p className="text-sm text-muted">No workstreams yet. Your leader can add them.</p>}
+      <p role="status" className="text-sm text-muted">{msg}</p>
+    </div>
+  );
+}
