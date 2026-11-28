@@ -10,6 +10,7 @@ import { profileImages } from "@/lib/profile";
 import { inMyTeams } from "@/lib/team-sql";
 import { requireUser } from "@/lib/session";
 import { HomeFeed } from "./HomeFeed";
+import { lifeData } from "@/lib/life";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -26,13 +27,14 @@ export default function HomePage() {
 async function Home() {
   const me = await requireUser();
   if (!me.onboardedAt) redirect("/onboarding");
-  const [feed, images, upcoming, teams] = await Promise.all([
+  const [feed, images, upcoming, teams, life] = await Promise.all([
     buildFeed(me.id),
     profileImages(me.id),
     db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance })
       .from(task).where(and(eq(task.ownerId, me.id), isNull(task.teamId), ne(task.status, "done"))).orderBy(asc(task.dueAt)).limit(50),
     db.select({ id: team.id, name: team.name, color: team.color, open: count(task.id) }).from(team)
       .leftJoin(task, and(eq(task.teamId, team.id), ne(task.status, "done"))).where(inMyTeams(me.id)).groupBy(team.id).orderBy(asc(team.name)),
+    lifeData(me),
   ]);
   return (
     <HomeFeed
@@ -41,6 +43,8 @@ async function Home() {
       feed={feed}
       upcoming={upcoming.filter((t) => t.dueAt).map((t) => ({ ...t, dueAt: t.dueAt!.toISOString() }))}
       teams={teams}
+      life={life}
+      open={upcoming.map((t) => ({ id: t.id, title: t.title }))}
     />
   );
 }

@@ -19,7 +19,7 @@ const STATUS: { id: TaskDoc["status"]; label: string; team?: boolean }[] = [
 
 type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; canApprove: boolean; members: { id: string; name: string }[]; done: string[]; notified: string[] };
 
-export function TaskEditor({ id, initial, goals, team, extras }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null }) {
+export function TaskEditor({ id, initial, goals, team, extras, subjects = [] }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null; subjects?: { id: string; code: string; color: string }[] }) {
   const router = useRouter();
   const [doc, setDoc] = useState<TaskDoc>(initial);
   const [save, setSave] = useState<Save>("saved");
@@ -173,6 +173,19 @@ export function TaskEditor({ id, initial, goals, team, extras }: { id: string; i
             ))}
           </div>
         </dd>
+        {!team && (
+          <>
+            <dt className="self-center text-sm text-muted"><label htmlFor="task-subject">Subject</label></dt>
+            <dd className="flex flex-wrap items-center gap-3">
+              <select id="task-subject" value={doc.subjectId ?? ""} onChange={(e) => update({ subjectId: e.target.value || null })} className={field}>
+                <option value="">No subject</option>
+                {subjects.map((s) => <option key={s.id} value={s.id}>{s.code}</option>)}
+              </select>
+              {subjects.length === 0 && <Link href="/cell" className="text-sm text-accent-text underline underline-offset-4">Add subjects in My Cell</Link>}
+              <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(doc.isExam)} onChange={(e) => update({ isExam: e.target.checked })} className="size-5 accent-[var(--accent)]" /> This is an exam (count it down)</label>
+            </dd>
+          </>
+        )}
         <dt className="self-center text-sm text-muted"><label htmlFor="due-date">Due date</label></dt>
         <dd className="flex flex-wrap items-center gap-2">
           <input id="due-date" type="date" value={doc.dueDate ?? ""} onChange={(e) => update({ dueDate: e.target.value || null, dueTime: e.target.value ? doc.dueTime : null })} className={field} />

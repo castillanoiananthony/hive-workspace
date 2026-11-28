@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { db } from "@/db";
 import { goal, task } from "@/db/schema";
 import { computeProgress, forgottenGoals } from "@/lib/progress";
+import { lifeData } from "@/lib/life";
 import { requireUser } from "@/lib/session";
 import { CellBoard } from "./CellBoard";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
@@ -28,7 +29,7 @@ async function Cell() {
   if (!me.onboardedAt) redirect("/onboarding");
   const [goals, tasks, archived] = await Promise.all([
     db.select().from(goal).where(and(eq(goal.ownerId, me.id), isNull(goal.archivedAt))).orderBy(asc(goal.createdAt)),
-    db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance, updatedAt: task.updatedAt })
+    db.select({ id: task.id, title: task.title, status: task.status, goalId: task.goalId, dueAt: task.dueAt, hasTime: task.hasTime, importance: task.importance, subjectId: task.subjectId, updatedAt: task.updatedAt })
       .from(task).where(and(eq(task.ownerId, me.id), isNull(task.teamId))).orderBy(asc(task.createdAt)),
     db.select({ id: goal.id, title: goal.title, level: goal.level }).from(goal).where(and(eq(goal.ownerId, me.id), isNotNull(goal.archivedAt))).orderBy(asc(goal.title)),
   ]);
@@ -38,7 +39,8 @@ async function Cell() {
     <CellBoard
       tz={me.timezone}
       goals={goals.map((g) => ({ id: g.id, title: g.title, level: g.level, parentId: g.parentId, period: g.period, manualProgress: g.manualProgress, done: g.done, progress: progress.get(g.id) ?? 0 }))}
-      tasks={tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, goalId: t.goalId, hasTime: t.hasTime, importance: t.importance, dueAt: t.dueAt?.toISOString() ?? null }))}
+      tasks={tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, goalId: t.goalId, hasTime: t.hasTime, importance: t.importance, subjectId: t.subjectId, dueAt: t.dueAt?.toISOString() ?? null }))}
+      life={await lifeData(me)}
       forgotten={forgotten}
       archived={archived}
     />

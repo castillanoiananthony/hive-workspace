@@ -8,6 +8,7 @@ import { zonedToUtc } from "@/lib/dates";
 import { can, canComment } from "@/lib/hive-perms";
 import { requireUser } from "@/lib/session";
 import { requireAdmin, teamAccess } from "@/lib/teams";
+import { doneAtFor } from "@/lib/task-status";
 
 const STATUSES = ["todo", "doing", "review", "done"] as const;
 type Status = (typeof STATUSES)[number];
@@ -40,7 +41,7 @@ export async function moveTeamTask(taskId: string, status: Status) {
     const [own] = mine ? [mine] : await db.select({ id: subtask.id }).from(subtask).where(and(eq(subtask.taskId, taskId), eq(subtask.ownerId, m.id)));
     if (!own) throw new Error("Only people working on this task can move it.");
   }
-  await db.update(task).set({ status }).where(eq(task.id, taskId));
+  await db.update(task).set({ status, doneAt: doneAtFor(status) }).where(eq(task.id, taskId));
   if (status === "review") await recordContribution({ teamId: t.teamId!, memberId: m.id, kind: "sent_for_review", what: t.title, taskId });
   if (status === "done") await recordContribution({ teamId: t.teamId!, memberId: m.id, kind: "approved", what: t.title, taskId });
   refresh(t.teamId!, taskId);

@@ -23,7 +23,9 @@ const VIEWS = [
 ] as const;
 
 /** `embedded`: inside a team page, so no page heading, no "My Cell" filter. */
-export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: { tasks: CalTask[]; tz: string; editable?: boolean; embedded?: boolean }) {
+export type ClassBlock = { id: string; title: string; weekday: number; start: string; end: string; room: string | null; color: string; from: string | null; until: string | null };
+
+export function HiveCalendar({ tasks, tz, editable = true, embedded = false, classes = [] }: { tasks: CalTask[]; tz: string; editable?: boolean; embedded?: boolean; classes?: ClassBlock[] }) {
   const ref = useRef<CalendarRef>(null);
   const router = useRouter();
   const [view, setView] = useState<string>("dayGridMonth");
@@ -41,8 +43,9 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
     const m = new Map<string, { name: string; color: string | null }>();
     for (const t of tasks) m.set(t.space, { name: t.spaceName, color: t.color });
     if (!embedded && !m.has("cell")) m.set("cell", { name: "My Cell", color: null });
+    if (classes.length) m.set("classes", { name: "Class schedule", color: "#6B7280" });
     return [...m.entries()];
-  }, [tasks, embedded]);
+  }, [tasks, embedded, classes.length]);
 
   const events = tasks
     .filter((t) => !hidden.has(t.space))
@@ -52,6 +55,12 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
       backgroundColor: t.tint ?? t.color ?? "var(--accent)", borderColor: t.tint ?? t.color ?? "var(--accent-edge)",
       textColor: readableOn(t.tint ?? t.color), classNames: t.done ? ["is-done"] : [],
     }));
+  // weekly classes repeat inside the semester (or every week when there is none); they can't be dragged or opened
+  const classEvents = hidden.has("classes") ? [] : classes.map((c) => ({
+    id: `cls-${c.id}`, groupId: `cls-${c.id}`, title: c.room ? `${c.title} (${c.room})` : c.title, editable: false,
+    daysOfWeek: [c.weekday], startTime: c.start, endTime: c.end, ...(c.from ? { startRecur: c.from } : {}), ...(c.until ? { endRecur: c.until } : {}),
+    color: c.color, contrastColor: readableOn(c.color), backgroundColor: c.color, borderColor: c.color, textColor: readableOn(c.color), classNames: ["is-class"],
+  }));
 
   function onDrop(info: EventDropInfo) {
     const iso = info.event.startStr; // UTC mode: these digits are the user's wall time
@@ -81,7 +90,7 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
         <Link href="/settings#calendar-feed" className="text-sm text-accent-text underline underline-offset-4">Add to Google Calendar</Link>
       </div>}
 
-      {tasks.length === 0 ? (
+      {tasks.length === 0 && classes.length === 0 ? (
         <div className="mt-8">
           <EmptyState pose="idle" title="Nothing on the calendar yet" body="Tasks show up here once they have a due date. Try quick add on My Cell: “Read chapter 3 Thursday”." action={<Link href="/cell" className="inline-flex min-h-11 items-center rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent">Go to My Cell</Link>} />
         </div>
@@ -134,9 +143,9 @@ export function HiveCalendar({ tasks, tz, editable = true, embedded = false }: {
               eventDurationEditable={false}
               longPressDelay={350}
               eventLongPressDelay={350}
-              events={events}
+              events={[...events, ...classEvents]}
               eventDrop={onDrop}
-              eventClick={(info) => { info.jsEvent.preventDefault(); if (!info.event.id.startsWith("ms-")) router.push(`/tasks/${info.event.id}`); }} // ms-: class milestones, not tasks
+              eventClick={(info) => { info.jsEvent.preventDefault(); if (!info.event.id.startsWith("ms-") && !info.event.id.startsWith("cls-")) router.push(`/tasks/${info.event.id}`); }} // ms-: class milestones, not tasks
               datesSet={(info) => { setTitle(info.view.title); setView(info.view.type); }}
               noEventsContent="No tasks due in this period."
               eventContent={(arg) => arg.view.type === "dayGridMonth"

@@ -1,4 +1,6 @@
 "use client";
+import type { Life } from "@/lib/life";
+import { SubjectsContext, TodayPanel } from "../cell/Life";
 import Link from "next/link";
 import { useState } from "react";
 import { HexBadge } from "@/components/app/HexBadge";
@@ -23,13 +25,14 @@ function ago(iso: string, now: number) {
 
 const LEVEL: Record<string, string> = { year: "year", month: "month", week: "week" };
 
-export function HomeFeed({ me, tz, feed, upcoming, teams }: { me: Me; tz: string; feed: FeedItem[]; upcoming: TaskView[]; teams: Team[] }) {
+export function HomeFeed({ me, tz, feed, upcoming, teams, life, open }: { me: Me; tz: string; feed: FeedItem[]; upcoming: TaskView[]; teams: Team[]; life: Life; open: { id: string; title: string }[] }) {
   const [now] = useState(() => Date.now());
   const first = (me.name || "").split(" ")[0];
   const soon = upcoming.filter((t) => new Date(t.dueAt!).getTime() < now + 7 * 86400000);
   const overdue = soon.filter((t) => new Date(t.dueAt!).getTime() < now).length;
 
   return (
+    <SubjectsContext.Provider value={life.subjects}>
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="mx-auto w-full max-w-2xl min-w-0">
         <h1 className="sr-only">Home</h1>
@@ -41,6 +44,8 @@ export function HomeFeed({ me, tz, feed, upcoming, teams }: { me: Me; tz: string
             <QuickAdd tz={tz} label={first ? `What do you need to do, ${first}?` : "What do you need to do?"} />
           </div>
         </section>
+
+        <TodayPanel life={life} open={open} />
 
         {soon.length > 0 && (
           <p className="mt-4 flex flex-wrap gap-2 text-sm">
@@ -78,6 +83,7 @@ export function HomeFeed({ me, tz, feed, upcoming, teams }: { me: Me; tz: string
         </section>
       </aside>
     </div>
+    </SubjectsContext.Provider>
   );
 }
 

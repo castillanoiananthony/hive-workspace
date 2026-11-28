@@ -3,7 +3,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, subtask, task, taskComment, taskLink, team, teamMember } from "@/db/schema";
+import { assignment, checklistItem, goal, subject, subtask, task, taskComment, taskLink, team, teamMember } from "@/db/schema";
 import { formatDue, utcToZoned } from "@/lib/dates";
 import { docToHtml } from "@/lib/doc-to-html";
 import { can, canComment } from "@/lib/hive-perms";
@@ -58,10 +58,11 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
         assigned: await db.select({ memberId: assignment.memberId, doneAt: assignment.doneAt, notifiedAt: assignment.notifiedAt }).from(assignment).where(eq(assignment.taskId, t.id)),
       }
     : null;
-  const [items, links, goals] = await Promise.all([
+  const [items, links, goals, subjects] = await Promise.all([
     db.select().from(checklistItem).where(eq(checklistItem.taskId, id)).orderBy(asc(checklistItem.position)),
     db.select().from(taskLink).where(eq(taskLink.taskId, id)).orderBy(asc(taskLink.position)),
     db.select({ id: goal.id, title: goal.title, level: goal.level }).from(goal).where(and(eq(goal.ownerId, me.id), isNull(goal.archivedAt))).orderBy(asc(goal.createdAt)),
+    t.teamId ? Promise.resolve([]) : db.select({ id: subject.id, code: subject.code, color: subject.color }).from(subject).where(eq(subject.ownerId, me.id)).orderBy(asc(subject.position)),
   ]);
   const due = t.dueAt ? utcToZoned(t.dueAt, me.timezone) : null;
   return (
@@ -69,9 +70,10 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
       id={t.id}
       goals={goals}
       extras={extras}
+      subjects={subjects}
       team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, importanceColors: teamInfo.importanceColors ?? null, canApprove: access ? can(access.me, "approve") : false, members: teamInfo.members.filter((m) => m.access === "member" || teamInfo.assigned.some((x) => x.memberId === m.id)).map(({ id, name }) => ({ id, name })), done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
       initial={{
-        title: t.title, notes: t.notes ?? null, status: t.status, importance: t.importance, goalId: t.goalId,
+        title: t.title, notes: t.notes ?? null, status: t.status, importance: t.importance, subjectId: t.subjectId, isExam: t.isExam, goalId: t.goalId,
         dueDate: due?.date ?? null, dueTime: t.hasTime ? due!.time : null,
         checklist: items.map((c) => ({ text: c.text, done: c.done })),
         links: links.map((l) => ({ title: l.title, url: l.url })),

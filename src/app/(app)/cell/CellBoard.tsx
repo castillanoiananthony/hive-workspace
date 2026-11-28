@@ -2,7 +2,7 @@
 import { ImportanceTag } from "@/components/app/ImportanceTag";
 import { IMPORTANCE } from "@/lib/importance";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { EmptyState } from "@/components/app/EmptyState";
 import { HexCheck } from "@/components/app/HexCheck";
 import { UndoBar, type Undo } from "@/components/app/UndoBar";
@@ -12,13 +12,17 @@ import { parseQuickAdd } from "@/lib/quickadd";
 import { archiveGoal, deleteGoal, deleteGoalNow, newTask, quickAddTask, restoreTask, setTaskStatus, snoozeGoal } from "./actions";
 import { Bee } from "@/components/brand/Bee";
 import { GoalDialog, type GoalDialogMode } from "./GoalDialog";
+import { LifeButtons, SubjectChip, SubjectFilter, SubjectsContext, TodayPanel } from "./Life";
+import type { Life } from "@/lib/life";
 
 export type GoalView = { id: string; title: string; level: "year" | "month" | "week"; parentId: string | null; period: string; manualProgress: number; done: boolean; progress: number };
-export type TaskView = { id: string; title: string; status: "todo" | "doing" | "review" | "done"; goalId: string | null; dueAt: string | null; hasTime: boolean; importance: number };
+export type TaskView = { id: string; title: string; status: "todo" | "doing" | "review" | "done"; goalId: string | null; dueAt: string | null; hasTime: boolean; importance: number; subjectId?: string | null };
 
 const LEVEL = { year: "Year goal", month: "Month goal", week: "Week goal" } as const;
 
-export function CellBoard({ goals, tasks, tz, forgotten, archived }: { goals: GoalView[]; tasks: TaskView[]; tz: string; forgotten: string[]; archived: { id: string; title: string; level: string }[] }) {
+export function CellBoard({ goals, tasks: allTasks, tz, forgotten, archived, life }: { goals: GoalView[]; tasks: TaskView[]; tz: string; forgotten: string[]; archived: { id: string; title: string; level: string }[]; life: Life }) {
+  const [subj, setSubj] = useState("");
+  const tasks = subj ? allTasks.filter((t) => t.subjectId === subj) : allTasks;
   const [dialog, setDialog] = useState<GoalDialogMode | null>(null);
   const [undo, setUndo] = useState<Undo>(null);
   const [, start] = useTransition();
@@ -46,7 +50,7 @@ export function CellBoard({ goals, tasks, tz, forgotten, archived }: { goals: Go
     });
 
   return (
-    <>
+    <SubjectsContext.Provider value={life.subjects}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold">My Cell</h1>
@@ -63,7 +67,10 @@ export function CellBoard({ goals, tasks, tz, forgotten, archived }: { goals: Go
       <div className="mt-6 grid gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0">
       <TourCard />
+      <TodayPanel life={life} open={allTasks.filter((t) => t.status !== "done").map((t) => ({ id: t.id, title: t.title }))} />
       <QuickAdd tz={tz} />
+      <div className="mt-4"><LifeButtons life={life} /></div>
+      <SubjectFilter value={subj} onChange={setSubj} />
       <Forgotten goals={goals.filter((g) => forgotten.includes(g.id))} onArchive={archive} />
 
       <section aria-labelledby="ladder" className="mt-8">
@@ -96,7 +103,7 @@ export function CellBoard({ goals, tasks, tz, forgotten, archived }: { goals: Go
 
       {dialog && <GoalDialog mode={dialog} goals={goals} onClose={() => setDialog(null)} />}
       <UndoBar value={undo} onClose={() => setUndo(null)} />
-    </>
+    </SubjectsContext.Provider>
   );
 }
 
@@ -243,6 +250,7 @@ export function TaskRow({ task: t, tz }: { task: TaskView; tz: string }) {
       <Link href={`/tasks/${t.id}`} className="min-h-11 flex-1 py-2 hover:underline">
         <span className={done ? "text-muted line-through" : undefined}>{t.title || "Untitled task"}</span>
         {t.importance > 0 && <ImportanceTag level={t.importance} className="ml-2 align-middle" />}
+        {t.subjectId && <span className="ml-2 align-middle"><SubjectChip id={t.subjectId} /></span>}
         {t.dueAt && (
           <span className={`ml-2 inline-block text-sm whitespace-nowrap ${overdue ? "text-danger" : "text-muted"}`}>
             {overdue ? "Overdue, " : ""}{formatDue(new Date(t.dueAt), t.hasTime, tz)}
@@ -256,6 +264,8 @@ export function TaskRow({ task: t, tz }: { task: TaskView; tz: string }) {
 export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label?: string }) {
   const [value, setValue] = useState("");
   const [importance, setImportance] = useState(0);
+  const subjects = useContext(SubjectsContext);
+  const [subjectId, setSubjectId] = useState("");
   const [status, setStatus] = useState<{ text: string; id?: string } | null>(null);
   const [pending, start] = useTransition();
   const input = useRef<HTMLInputElement>(null);
@@ -266,7 +276,7 @@ export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label
     if (!value.trim()) return;
     start(async () => {
       try {
-        const r = await quickAddTask(value, null, importance);
+        const r = await quickAddTask(value, null, importance, subjectId || null);
         setStatus({ text: `Added “${r.title}”${r.dueAt ? `, due ${formatDue(new Date(r.dueAt), r.hasTime, tz)}` : ""}.`, id: r.id });
         setValue(""); setImportance(0);
         input.current?.focus();
@@ -287,6 +297,14 @@ export function QuickAdd({ tz, label = "Quick add a task" }: { tz: string; label
         />
         <button disabled={pending || !value.trim()} className="min-h-12 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-accent-edge disabled:opacity-50">Add</button>
       </div>
+      {subjects.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <label htmlFor="quick-subject" className="text-sm text-muted">Subject</label>
+          <select id="quick-subject" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="min-h-10 rounded-full border border-line bg-surface px-3 text-sm">
+            <option value="">None</option>{subjects.map((s) => <option key={s.id} value={s.id}>{s.code}</option>)}
+          </select>
+        </div>
+      )}
       <div role="radiogroup" aria-label="Importance" className="mt-2 flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">Importance</span>
         {[{ v: 0, label: "None", color: null as string | null }, ...IMPORTANCE.map((l) => ({ v: l.v as number, label: l.label, color: l.color as string | null }))].map((l) => (

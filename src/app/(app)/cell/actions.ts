@@ -3,10 +3,11 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, task, taskLink, teamMember } from "@/db/schema";
+import { assignment, checklistItem, goal, subject, task, taskLink, teamMember } from "@/db/schema";
 import { newToken } from "@/lib/tokens";
 import { requirePerm, teamAccess } from "@/lib/teams";
 import { can } from "@/lib/hive-perms";
+import { doneAtFor } from "@/lib/task-status";
 import { periodFor, zonedToUtc } from "@/lib/dates";
 import { wouldCycle } from "@/lib/progress";
 import { parseQuickAdd } from "@/lib/quickadd";
@@ -30,6 +31,13 @@ async function ownTask(userId: string, id: string) {
   if (t.teamId) await requirePerm(userId, t.teamId, "tasks"); // team tasks: anyone with the "Create & assign tasks" power
   else if (t.ownerId !== userId) throw new Error("That task no longer exists.");
   return t;
+}
+
+/** A subject id only if it's the user's own (anything else becomes "no subject"). */
+async function ownSubject(userId: string, id: string | null | undefined) {
+  if (!id) return null;
+  const [s] = await db.select({ id: subject.id }).from(subject).where(and(eq(subject.id, id), eq(subject.ownerId, userId)));
+  return s?.id ?? null;
 }
 
 const touchGoal = (id: string | null) => (id ? db.update(goal).set({ lastActivityAt: new Date() }).where(eq(goal.id, id)) : null);
@@ -104,12 +112,12 @@ export async function deleteGoalNow(id: string) {
 
 // ---------- tasks ----------
 
-export async function quickAddTask(input: string, goalId: string | null = null, importance = 0) {
+export async function quickAddTask(input: string, goalId: string | null = null, importance = 0, subjectId: string | null = null) {
   const me = await requireUser();
   const parsed = parseQuickAdd(text(input, 300), me.timezone);
   if (!parsed.title) throw new Error("Type what you need to do.");
   const parent = await ownGoal(me.id, goalId);
-  const [row] = await db.insert(task).values({ ownerId: me.id, title: parsed.title.slice(0, 200), dueAt: parsed.dueAt, hasTime: parsed.hasTime, goalId: parent?.id ?? null, importance: [1, 2, 3].includes(Number(importance)) ? Number(importance) : 0 }).returning({ id: task.id });
+  const [row] = await db.insert(task).values({ ownerId: me.id, title: parsed.title.slice(0, 200), dueAt: parsed.dueAt, hasTime: parsed.hasTime, goalId: parent?.id ?? null, importance: [1, 2, 3].includes(Number(importance)) ? Number(importance) : 0, subjectId: await ownSubject(me.id, subjectId) }).returning({ id: task.id });
   await touchGoal(parent?.id ?? null);
   revalidatePath("/cell");
   return { id: row.id, title: parsed.title, dueAt: parsed.dueAt?.toISOString() ?? null, hasTime: parsed.hasTime };
@@ -126,7 +134,7 @@ export async function setTaskStatus(id: string, status: "todo" | "doing" | "revi
   const me = await requireUser();
   const t = await ownTask(me.id, id);
   if (!["todo", "doing", "done"].includes(status)) throw new Error("Unknown status.");
-  await db.update(task).set({ status }).where(eq(task.id, id));
+  await db.update(task).set({ status, doneAt: doneAtFor(status) }).where(eq(task.id, id));
   await touchGoal(t.goalId);
   revalidatePath("/cell");
 }
@@ -141,6 +149,8 @@ export type TaskDoc = {
   checklist: { text: string; done: boolean }[];
   links: { title: string; url: string }[];
   importance?: number; // 0 none, 1 low, 2 medium, 3 high
+  subjectId?: string | null; // personal tasks only
+  isExam?: boolean;
   howTo?: unknown; // team tasks: "How to do it"
   assignees?: string[]; // team tasks: roster member ids
 };
@@ -173,7 +183,8 @@ export async function saveTask(id: string, doc: TaskDoc) {
   });
   await db.transaction(async (tx) => {
     await tx.update(task).set({
-      title: text(doc.title), notes: doc.notes ?? null, status, importance: [1, 2, 3].includes(Number(doc.importance)) ? Number(doc.importance) : 0,
+      ...(before.teamId ? {} : { subjectId: await ownSubject(me.id, doc.subjectId ?? null), isExam: Boolean(doc.isExam) }),
+      title: text(doc.title), notes: doc.notes ?? null, status, doneAt: doneAtFor(status), importance: [1, 2, 3].includes(Number(doc.importance)) ? Number(doc.importance) : 0,
       dueAt, hasTime: Boolean(dueAt && doc.dueTime), goalId: parent?.id ?? null,
       ...(before.teamId ? { howTo: doc.howTo ?? null } : {}),
     }).where(eq(task.id, id));

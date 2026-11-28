@@ -118,6 +118,9 @@ export const task = pgTable("task", {
   dueAt: timestamp("due_at", { withTimezone: true }),
   hasTime: boolean("has_time").notNull().default(false),
   importance: smallint("importance").notNull().default(0), // 0 none, 1 low, 2 medium, 3 high
+  subjectId: text("subject_id").references((): AnyPgColumn => subject.id, { onDelete: "set null" }), // personal tasks: e.g. "ASE 111"
+  isExam: boolean("is_exam").notNull().default(false), // pinned as a countdown in My Cell
+  doneAt: timestamp("done_at", { withTimezone: true }), // when it was finished (feeds Nectar)
   createdAt: created(),
   updatedAt: updated(),
 }, (t) => [index("task_owner_idx").on(t.ownerId), index("task_team_idx").on(t.teamId), index("task_goal_idx").on(t.goalId), index("task_due_idx").on(t.dueAt)]);
@@ -352,3 +355,44 @@ export const peerResponse = pgTable("peer_response", {
   comment: text("comment"),
   createdAt: created(),
 }, (t) => [uniqueIndex("peer_response_uq").on(t.evalId, t.raterId, t.rateeId), index("peer_response_eval_idx").on(t.evalId)]);
+
+// ---------- student life in My Cell ----------
+
+export const subject = pgTable("subject", {
+  id: id(),
+  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  code: text("code").notNull(), // "ASE 111"
+  color: text("color").notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: created(),
+}, (t) => [index("subject_owner_idx").on(t.ownerId)]);
+
+export type TermPeriod = { name: string; start: string; end: string }; // dates as YYYY-MM-DD
+export const semester = pgTable("semester", {
+  id: id(),
+  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // "1st Sem A.Y. 2026–2027"
+  start: text("start").notNull(),
+  end: text("end").notNull(),
+  periods: jsonb("periods").$type<TermPeriod[]>().notNull(),
+  createdAt: created(),
+}, (t) => [index("semester_owner_idx").on(t.ownerId)]);
+
+// A weekly class meeting, shown as a repeating block on the calendar.
+export const classSlot = pgTable("class_slot", {
+  id: id(),
+  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  subjectId: text("subject_id").references(() => subject.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  weekday: smallint("weekday").notNull(), // 0 Sunday … 6 Saturday
+  start: text("start").notNull(), // "08:00"
+  end: text("end").notNull(),
+  room: text("room"),
+}, (t) => [index("class_slot_owner_idx").on(t.ownerId)]);
+
+// "Today's 3": up to three tasks picked for one day (the user's own date).
+export const focus = pgTable("focus", {
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  taskIds: jsonb("task_ids").$type<string[]>().notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.date] })]);
