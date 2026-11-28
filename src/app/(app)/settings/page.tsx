@@ -5,6 +5,7 @@ import { DEFAULT_THEME } from "@/lib/themes";
 import { requireUser } from "@/lib/session";
 import { SignOutButton } from "@/components/app/SignOutButton";
 import { BuzzSetting } from "./BuzzSetting";
+import { InstallApp } from "./InstallApp";
 import { NameField } from "./NameField";
 import { Appearance } from "./Appearance";
 import { CalendarFeed } from "./CalendarFeed";
@@ -39,6 +40,7 @@ async function Body() {
         <div className="mt-4"><SignOutButton className="min-h-11 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-danger disabled:opacity-60" /></div>
       </section>
       <BuzzSetting initial={me.buzzMode} />
+      <InstallApp />
       <Appearance initial={me.theme ?? DEFAULT_THEME} />
       <CalendarFeed initialToken={me.icsToken} appUrl={process.env.APP_URL ?? "http://localhost:3000"} />
       <section aria-labelledby="about-h">

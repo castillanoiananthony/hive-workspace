@@ -14,7 +14,9 @@ const nextConfig: NextConfig = {
   },
   // Baseline browser protections for every page. (No CSP yet: the theme boot script is inline; add one with nonces if needed.)
   async headers() {
-    return [{
+    return [
+      // the service worker must always be re-checked, so app updates reach installed phones
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Content-Type", value: "application/javascript; charset=utf-8" }] },{
       source: "/:path*",
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },

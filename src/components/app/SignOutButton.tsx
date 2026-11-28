@@ -2,6 +2,7 @@
 import { useFormStatus } from "react-dom";
 import { signOut } from "@/app/(app)/actions";
 import { BusyOverlay } from "./BusyOverlay";
+import { wipe } from "@/lib/offline-store";
 
 function Inner({ className }: { className: string }) {
   const { pending } = useFormStatus();
@@ -9,5 +10,6 @@ function Inner({ className }: { className: string }) {
 }
 
 export function SignOutButton({ className }: { className: string }) {
-  return <form action={signOut}><Inner className={className} /></form>;
+  // nothing of yours stays on this device: the offline copy and cached pages go first
+  return <form action={async () => { await wipe(); navigator.serviceWorker?.controller?.postMessage("clear"); await signOut(); }}><Inner className={className} /></form>;
 }
