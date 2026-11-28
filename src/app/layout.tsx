@@ -1,4 +1,5 @@
 import { FieldHints } from "@/components/app/FieldHints";
+import { UpdateBar } from "@/components/app/UpdateBar";
 import type { Metadata, Viewport } from "next";
 import { Gabarito, Manrope } from "next/font/google";
 import { DEFAULT_THEME, themeVars } from "@/lib/themes";
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
-      <body className="min-h-full">{children}<FieldHints /></body>
+      <body className="min-h-full">{children}<FieldHints /><UpdateBar build={process.env.VERCEL_GIT_COMMIT_SHA ?? "dev"} /></body>
     </html>
   );
 }
