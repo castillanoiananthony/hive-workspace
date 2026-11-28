@@ -9,13 +9,15 @@ import { newTeamTask } from "../actions";
 import { Kanban } from "./Kanban";
 import { MemberAvatar } from "./MemberAvatar";
 import { Bar, fmtDay, pctOf } from "./MyProgress";
-import { has, nameOf, type AssignedT, type LogT, type MeT, type MemberT, type TaskT, type TeamT } from "./types";
+import { has, nameOf, type AssignedT, type ContributionT, type LogT, type MeT, type MemberT, type TaskT, type TeamT } from "./types";
+import { WaggleButton } from "@/components/app/WaggleButton";
+import { waggle } from "@/lib/waggle";
 
 const btnPrimary = "min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60";
 const Chevron = () => <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden className="shrink-0 text-muted transition-transform group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>;
 
 /** The Tasks tab: your own parts first (with progress), then every team task as a card that opens to show each person. */
-export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster }: { team: TeamT; members: MemberT[]; tasks: TaskT[]; assigned: AssignedT[]; logs: LogT[]; tz: string; me: MeT; onRoster: () => void }) {
+export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster, contributions = [] }: { team: TeamT; members: MemberT[]; tasks: TaskT[]; assigned: AssignedT[]; logs: LogT[]; tz: string; me: MeT; onRoster: () => void; contributions?: ContributionT[] }) {
   const [now] = useState(() => Date.now());
   const [pending, start] = useTransition();
   const [view, setView] = useState<"list" | "board">("list");
@@ -54,6 +56,11 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster }
       <section aria-labelledby="all-h" className="grid grid-cols-[minmax(0,1fr)] gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="all-h" className="font-display text-lg font-semibold">All team tasks</h2>
+          <WaggleButton text={waggle({
+            team: team.name, date: new Intl.DateTimeFormat("en", { timeZone: tz, month: "short", day: "numeric" }).format(now),
+            done: contributions.filter((c) => c.kind !== "sent_for_review" && now - new Date(c.at).getTime() < 7 * 86_400_000).map((c) => ({ who: (() => { const m = members.find((x) => x.id === c.memberId); return m ? nameOf(m) : "someone"; })(), what: c.what })),
+            tasks: tasks.map((t) => { const d = t.dueAt ? new Date(t.dueAt).getTime() : null; return { title: t.title, status: t.status, progress: avg(assigned.filter((a) => a.taskId === t.id)), due: t.dueAt ? formatDue(new Date(t.dueAt), t.hasTime, tz) : null, dueSoon: d !== null && d >= now && d - now < 3 * 86_400_000, overdue: d !== null && d < now }; }),
+          })} />
           <div role="radiogroup" aria-label="View" className="flex rounded-full border border-line bg-surface p-1">
             {(["list", "board"] as const).map((v) => (
               <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => setView(v)}

@@ -9,7 +9,7 @@ import { zonedToUtc } from "@/lib/dates";
 import { announcementEmail, sendEmail } from "@/lib/email";
 import { requireUser } from "@/lib/session";
 import { createTeamWithAdmin, TEAM_COLORS } from "@/lib/teams";
-import { unsubscribeLinks } from "@/lib/buzz";
+import { buzzModeOf, unsubscribeLinks } from "@/lib/buzz";
 
 const clean = (s: unknown, max: number) => String(s ?? "").trim().slice(0, max);
 const app = () => process.env.APP_URL ?? "http://localhost:3000";
@@ -157,6 +157,7 @@ export async function announce(colonyId: string, body: string) {
   // shortcut: sent one by one here; Phase 5's daily digest will batch these to stay under the email provider's daily limit
   let sent = 0, skipped = 0;
   for (const s of students) {
+    if ((await buzzModeOf(s)) !== "instant") continue; // daily-digest students get it in tomorrow's digest; "off" gets no email
     if (sent >= 80) { skipped++; continue; } // stay well under the free plan's 100 emails a day
     const key = `announce:${post.id}:${s.id}`;
     const claimed = await db.insert(emailLog).values({ teamId: s.teamId, memberId: s.id, kind: "announce", recipient: s.email, dedupeKey: key }).onConflictDoNothing().returning({ id: emailLog.id });

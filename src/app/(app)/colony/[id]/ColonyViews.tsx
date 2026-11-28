@@ -4,6 +4,7 @@ import { unstable_rethrow, useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
 import { BusyOverlay } from "@/components/app/BusyOverlay";
 import { HexBadge } from "@/components/app/HexBadge";
+import { WaggleButton } from "@/components/app/WaggleButton";
 import { HexProgress } from "@/components/brand/HexProgress";
 import { addMilestone, addStudentToSwarm, announce, assignProject, createPeerEval, createSwarm, deleteMilestone, joinSwarm, setPeerEval, submitPeerEval, updateColony } from "../actions";
 
@@ -100,12 +101,14 @@ export function QueenView(p: Base & { code: string; swarms: Swarm[]; students: S
   );
 }
 
-function SwarmsTab({ id, swarms, students }: { id: string; swarms: Swarm[]; students: Student[] }) {
+function SwarmsTab({ id, name, swarms, students }: { id: string; name: string; swarms: Swarm[]; students: Student[] }) {
   const { pending, msg, run } = useRun();
+  const gc = [`🐝 ${name}: class update`, "", ...swarms.map((s) => `• ${s.name}: ${s.progress}% done${s.overdue ? `, ${s.overdue} overdue` : ""}${s.quiet ? ", quiet for 5+ days" : ""}`), "", "Check your swarm in HIVE-WORKSPACE."].join("\n");
   const free = students.filter((s) => !s.swarm);
   return (
     <div className="grid gap-6">
       <BusyOverlay show={pending} label="Saving…" />
+      {swarms.length > 0 && <WaggleButton text={gc} label="Copy class update for GC" />}
       {swarms.length === 0 ? <p className={`${card} text-muted`}>No swarms yet. Make the first one below, or turn on &ldquo;Students form their own swarms&rdquo; in Class settings.</p> : (
         <div className={`${card} relative overflow-x-auto p-0 sm:p-0`}>
           <table className="w-full min-w-[42rem] border-collapse text-left">

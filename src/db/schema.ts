@@ -24,6 +24,8 @@ export const user = pgTable("user", {
   icsToken: text("ics_token").unique(),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   bio: text("bio"),
+  buzzMode: text("buzz_mode").$type<"instant" | "digest" | "off">().notNull().default("instant"), // how Buzz emails reach you
+  lastDigestAt: timestamp("last_digest_at", { withTimezone: true }), // last daily Buzz digest sent
 });
 
 // Profile picture and banner, already resized and re-encoded to WebP on upload (small enough for Postgres).
@@ -170,6 +172,7 @@ export const assignment = pgTable("assignment", {
   doneAt: timestamp("done_at", { withTimezone: true }),
   notifiedAt: timestamp("notified_at", { withTimezone: true }), // when the assignment email went out
   progress: smallint("progress").notNull().default(0), // 0-100, the member's own slider
+  snoozedUntil: timestamp("snoozed_until", { withTimezone: true }), // "Snooze" in an email: no reminders before this
   createdAt: created(),
 }, (t) => [uniqueIndex("assignment_task_member_uq").on(t.taskId, t.memberId)]);
 
@@ -205,7 +208,7 @@ export const template = pgTable("template", {
   updatedAt: updated(),
 });
 
-export const emailKind = pgEnum("email_kind", ["assign", "remind3", "remind1", "digest", "invite", "announce"]);
+export const emailKind = pgEnum("email_kind", ["assign", "remind3", "remind1", "digest", "invite", "announce", "remind0", "help", "daily", "subtask"]);
 export const emailStatus = pgEnum("email_status", ["queued", "sent", "failed"]);
 
 export const emailLog = pgTable("email_log", {

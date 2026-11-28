@@ -23,7 +23,7 @@ type Member = MemberT;
 type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
-type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite" | "announce"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
+type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite" | "announce" | "remind0" | "help" | "daily" | "subtask"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
 type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
 
 // tabs a member can see; some only appear with the matching power
@@ -159,7 +159,7 @@ function Recurrence({ template: t, members }: { template: Template; members: Mem
 
 // ---------- email log ----------
 
-const KIND = { assign: "New task", remind3: "Reminder", remind1: "Last reminder", digest: "Weekly digest", invite: "Invite", announce: "Class announcement" } as const;
+const KIND = { assign: "New task", remind3: "Reminder", remind1: "Last reminder", digest: "Weekly digest", invite: "Invite", announce: "Class announcement", remind0: "Due today", help: "Asked for help", daily: "Daily digest", subtask: "Subtask reminder" } as const;
 
 function EmailLog({ log, tz }: { log: LogRow[]; tz: string }) {
   if (log.length === 0) return <EmptyState pose="fly" title="No emails yet" body="Every Buzz email this team sends shows up here: who got it, what it was, when, and whether it went through." />;

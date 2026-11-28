@@ -65,3 +65,10 @@ export async function updateName(name: string) {
   await db.update(user).set({ name: n }).where(eq(user.id, me.id));
   revalidatePath("/settings");
 }
+
+/** Instant, once-a-day or no Buzz emails. */
+export async function setBuzzMode(mode: "instant" | "digest" | "off") {
+  const me = await requireUser();
+  if (!["instant", "digest", "off"].includes(mode)) throw new Error("Unknown setting.");
+  await db.update(user).set({ buzzMode: mode, ...(mode === "digest" ? { lastDigestAt: new Date() } : {}) }).where(eq(user.id, me.id)); // first digest: tomorrow morning
+}
