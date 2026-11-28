@@ -103,6 +103,8 @@ export const team = pgTable("team", {
   joinCode: text("join_code").unique(), // shareable join link; null = switched off
   importanceColors: jsonb("importance_colors").$type<Record<string, string>>(), // overrides for Low/Medium/High
   colonyId: text("colony_id").references((): AnyPgColumn => colony.id, { onDelete: "set null" }), // a Swarm inside a class
+  kind: text("kind").$type<"blank" | "hackathon" | "competition" | "project">().notNull().default("blank"), // the template it started from
+  archivedAt: timestamp("archived_at", { withTimezone: true }), // finished hives become read-only
   createdAt: created(),
   updatedAt: updated(),
 });
@@ -399,3 +401,36 @@ export const focus = pgTable("focus", {
   date: text("date").notNull(),
   taskIds: jsonb("task_ids").$type<string[]>().notNull(),
 }, (t) => [primaryKey({ columns: [t.userId, t.date] })]);
+
+// ---------- dev team & competition mode ----------
+
+// A hive's own milestones (hackathons use hour-level times).
+export const hiveMilestone = pgTable("hive_milestone", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  hasTime: boolean("has_time").notNull().default(false),
+  doneAt: timestamp("done_at", { withTimezone: true }),
+  position: integer("position").notNull().default(0),
+  createdAt: created(),
+}, (t) => [index("hive_milestone_team_idx").on(t.teamId)]);
+
+// Team checklists (submission, pitch prep, anything) where every item can have one owner.
+export const teamChecklist = pgTable("team_checklist", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: created(),
+}, (t) => [index("team_checklist_team_idx").on(t.teamId)]);
+
+export const teamChecklistItem = pgTable("team_checklist_item", {
+  id: id(),
+  checklistId: text("checklist_id").notNull().references(() => teamChecklist.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  ownerId: text("owner_id").references(() => teamMember.id, { onDelete: "set null" }),
+  doneAt: timestamp("done_at", { withTimezone: true }),
+  doneById: text("done_by_id").references(() => teamMember.id, { onDelete: "set null" }),
+  position: integer("position").notNull().default(0),
+}, (t) => [index("team_checklist_item_idx").on(t.checklistId)]);

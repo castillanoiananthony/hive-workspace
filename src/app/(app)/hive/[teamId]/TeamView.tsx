@@ -16,7 +16,9 @@ import { Vault, type VaultLink } from "./Vault";
 import { Board } from "./TeamTasks";
 import { Activity, type DayT } from "./Activity";
 import { HiveCalendar, type CalTask } from "../../calendar/HiveCalendar";
-import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT, type ContributionT } from "./types";
+import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT, type ContributionT, type HiveMilestoneT, type ChecklistT } from "./types";
+import { Countdown, Plan } from "./Plan";
+import { setArchived } from "../dev-actions";
 
 type Team = TeamT;
 type Member = MemberT;
@@ -24,11 +26,11 @@ type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite" | "announce" | "remind0" | "help" | "daily" | "subtask"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; hiveMilestones?: HiveMilestoneT[]; checklists?: ChecklistT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
-  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "calendar", label: "Calendar" }, { id: "activity", label: "Activity" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
+  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "plan", label: "Milestones" }, { id: "calendar", label: "Calendar" }, { id: "activity", label: "Activity" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
   { id: "templates", label: "Templates", need: "templates" }, { id: "log", label: "Email log", need: "log" }, { id: "settings", label: "Team settings", need: "settings" },
 ];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -37,7 +39,10 @@ const btn = "min-h-11 rounded-[var(--radius)] border border-line px-4 font-mediu
 const field = "min-h-11 rounded-[var(--radius)] border border-line bg-bg px-3 text-base focus:border-accent-edge";
 
 export function TeamView(props: Props) {
-  const { team, members, tasks, me } = props;
+  const { team, members, tasks } = props;
+  const leader = props.me.isAdmin;
+  // an archived hive is read-only for everyone (the Leader brings it back from the banner)
+  const me = team.archived ? { ...props.me, perms: [], isAdmin: false } : props.me;
   const tabs = TABS.filter((t) => (me.access === "guest" ? ["comb", "board"].includes(t.id) : !t.need || has(me, t.need) || (t.id === "settings" && me.isAdmin)));
   const [tab, setTab] = useState("comb");
   const [pending, start] = useTransition();
@@ -56,6 +61,13 @@ export function TeamView(props: Props) {
         {has(me, "tasks") && <button type="button" disabled={pending} onClick={() => start(() => newTeamTask(team.id))} className={btnPrimary}>New team task</button>}
       </div>
 
+      {team.archived && (
+        <div role="status" className="mt-6 flex flex-wrap items-center gap-3 rounded-[calc(var(--radius)*2)] border border-line bg-raised px-4 py-3">
+          <p className="min-w-0 flex-1">This hive was archived on {team.archived}. It&apos;s read-only.</p>
+          <Link href={`/hive/${team.id}/summary`} className="inline-flex min-h-10 items-center rounded-[var(--radius)] border border-line px-3 text-sm font-medium hover:border-accent-edge">Project summary</Link>
+          {leader && <button type="button" onClick={() => setArchived(team.id, false)} className="min-h-10 rounded-[var(--radius)] border border-accent-edge/70 px-3 text-sm font-medium text-accent-text hover:bg-accent/10">Bring it back</button>}
+        </div>
+      )}
       {props.colonyInfo && (
         <div className="mt-6 flex flex-wrap items-center gap-2 rounded-[calc(var(--radius)*2)] border border-line bg-surface px-4 py-3 text-sm">
           <span className="text-muted">Swarm in <Link href={`/colony/${props.colonyInfo.id}`} className="font-medium text-ink underline underline-offset-4">{props.colonyInfo.name}</Link>.</span>
@@ -70,8 +82,10 @@ export function TeamView(props: Props) {
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-6">
+        {tab === "plan" && <Plan team={team} me={me} members={members} milestones={props.hiveMilestones ?? []} checklists={props.checklists ?? []} />}
+        {tab === "comb" && <><Countdown milestones={props.hiveMilestones ?? []} hourly={team.kind === "hackathon"} /></>}
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}
-        {tab === "board" && <Board {...props} onRoster={() => setTab("members")} />}
+        {tab === "board" && <Board {...props} me={me} onRoster={() => setTab("members")} />}
         {tab === "calendar" && (props.calendar.length ? <HiveCalendar tasks={props.calendar} tz={props.tz} editable={has(me, "tasks")} embedded /> : <p className="rounded-[calc(var(--radius)*2)] border border-dashed border-line p-8 text-center text-muted">No team tasks have a due date yet. Give one a date and it shows up here.</p>)}
         {tab === "activity" && <Activity team={team} tasks={tasks} assigned={props.assigned} members={members} days={props.days} logs={props.logs} tz={props.tz} contributions={props.contributions} />}
         {tab === "vault" && <Vault team={team} links={props.links} members={members} me={me} />}
@@ -239,6 +253,14 @@ function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: Ro
       {me.isAdmin && <Roles team={team} roles={roles} members={members} />}
 
       <BusyOverlay show={deleting} label="Deleting the team…" />
+      <section aria-labelledby="arch-h" className="grid gap-3 rounded-[var(--radius)] border border-line p-5">
+        <h2 id="arch-h" className="font-semibold">Finished? Archive and summarise</h2>
+        <p className="text-sm text-muted">The project summary lists milestones hit, who contributed what, and the final results: ready to print or save as PDF for portfolios and resumes. Archiving makes the hive read-only and moves it to the Archived list; you can bring it back any time.</p>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/hive/${team.id}/summary`} className="inline-flex min-h-11 items-center rounded-[var(--radius)] border border-line px-4 font-medium hover:border-accent-edge">Project summary</Link>
+          {me.isAdmin && <button type="button" disabled={pending} onClick={() => start(async () => { await setArchived(team.id, !team.archived); router.refresh(); })} className="min-h-11 rounded-[var(--radius)] border border-line px-4 font-medium hover:border-accent-edge disabled:opacity-60">{team.archived ? "Bring the hive back" : "Archive this hive"}</button>}
+        </div>
+      </section>
       {me.isAdmin && <section aria-labelledby="danger-h" className="grid gap-3 rounded-[var(--radius)] border border-danger/50 p-5">
         <h2 id="danger-h" className="font-semibold text-danger">Delete this team</h2>
         <p className="text-sm text-muted">This deletes the team&apos;s tasks, roster and templates. It can&apos;t be undone. Type <strong className="text-ink">{team.name}</strong> to confirm.</p>

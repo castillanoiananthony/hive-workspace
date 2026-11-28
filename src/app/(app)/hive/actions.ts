@@ -4,11 +4,13 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { assignment, checklistItem, combPost, progressLog, task, taskLink, team, teamLink, teamMember, teamRole, template } from "@/db/schema";
+import { assignment, checklistItem, combPost, hiveMilestone, progressLog, teamChecklist, teamChecklistItem, task, taskLink, team, teamLink, teamMember, teamRole, template } from "@/db/schema";
 import { sendInvites, sendPendingAssignments } from "@/lib/buzz";
 import { ALL_PERMS, DEFAULT_PERMS, type Perm } from "@/lib/hive-perms";
 import { cleanImportanceColors } from "@/lib/importance";
 import { recordContribution } from "@/lib/contributions";
+import { presetChecklists } from "@/lib/hive-templates";
+import { zonedToUtc } from "@/lib/dates";
 import { syncTaskStatus } from "@/lib/task-status";
 import { parseRoster } from "@/lib/roster";
 import { requireUser } from "@/lib/session";
@@ -35,11 +37,21 @@ async function starterPlacement(teamId: string) {
 
 // ---------- teams ----------
 
-export async function createTeam(input: { name: string; color: string; roles?: string[] }) {
+export async function createTeam(input: { name: string; color: string; roles?: string[]; kind?: string; milestones?: { title: string; date: string; time: string | null }[] }) {
   const me = await requireUser();
   const name = text(input.name, 80);
   if (!name) throw new Error("Give your team a name.");
   const id = await createTeamWithAdmin(me, name, color(input.color), Array.isArray(input.roles) ? input.roles.map(String) : undefined);
+  const kind = (["hackathon", "competition", "project"] as const).find((k) => k === input.kind) ?? "blank";
+  await db.update(team).set({ kind }).where(eq(team.id, id));
+  // the template's milestones (as edited in the New team box) and its checklists
+  const ms = (Array.isArray(input.milestones) ? input.milestones : []).slice(0, 40)
+    .map((m, i) => ({ title: text(m.title, 120), date: String(m.date ?? ""), time: m.time && /^\d{2}:\d{2}$/.test(m.time) ? m.time : null, i })).filter((m) => m.title);
+  if (ms.length) await db.insert(hiveMilestone).values(ms.map((m) => ({ teamId: id, title: m.title, dueAt: /^\d{4}-\d{2}-\d{2}$/.test(m.date) ? zonedToUtc(m.date, m.time, me.timezone) : null, hasTime: Boolean(m.time), position: m.i })));
+  for (const [pos, c] of presetChecklists(kind).entries()) {
+    const [row] = await db.insert(teamChecklist).values({ teamId: id, title: c.title, position: pos }).returning({ id: teamChecklist.id });
+    await db.insert(teamChecklistItem).values(c.items.map((t, i) => ({ checklistId: row.id, text: t, position: i })));
+  }
   refresh();
   redirect(`/hive/${id}`);
 }
@@ -260,7 +272,8 @@ export async function hideCombPost(postId: string, hidden: boolean) {
 export async function markMyPart(taskId: string, done: boolean) {
   const me = await requireUser();
   const [t] = await db.select({ teamId: task.teamId }).from(task).where(eq(task.id, taskId));
-  const { me: member } = await teamAccess(me.id, t?.teamId);
+  const { me: member, team: tm } = await teamAccess(me.id, t?.teamId);
+  if (tm.archivedAt) throw new Error("This hive is archived, so it's read-only.");
   const [a] = await db.select().from(assignment).where(and(eq(assignment.taskId, taskId), eq(assignment.memberId, member.id)));
   if (!a) throw new Error("This task isn't assigned to you.");
   await db.update(assignment).set({ doneAt: done ? a.doneAt ?? new Date() : null, progress: done ? 100 : Math.min(a.progress, 99) }).where(eq(assignment.id, a.id));
@@ -275,7 +288,8 @@ export async function markMyPart(taskId: string, done: boolean) {
 export async function logProgress(taskId: string, input: { progress: number; note?: string; done: boolean }) {
   const me = await requireUser();
   const [t] = await db.select({ teamId: task.teamId }).from(task).where(eq(task.id, taskId));
-  const { me: member } = await teamAccess(me.id, t?.teamId);
+  const { me: member, team: tm } = await teamAccess(me.id, t?.teamId);
+  if (tm.archivedAt) throw new Error("This hive is archived, so it's read-only.");
   const [a] = await db.select().from(assignment).where(and(eq(assignment.taskId, taskId), eq(assignment.memberId, member.id)));
   if (!a) throw new Error("This task isn't assigned to you.");
   const done = Boolean(input.done);

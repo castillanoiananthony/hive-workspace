@@ -22,6 +22,7 @@ export async function teamAccess(userId: string, teamId: string | null | undefin
 /** Same, but also requires one "Hive control" power (the admin has them all). */
 export async function requirePerm(userId: string, teamId: string | null | undefined, perm: Perm): Promise<Access> {
   const a = await teamAccess(userId, teamId);
+  if (a.team.archivedAt) throw new Error("This hive is archived, so it's read-only. The Leader can bring it back in Team settings.");
   if (!can(a.me, perm)) throw new Error("You don't have permission to do that in this team. Ask the team's admin.");
   return a;
 }

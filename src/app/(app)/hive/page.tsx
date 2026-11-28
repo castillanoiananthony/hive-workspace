@@ -28,7 +28,8 @@ export default function HivePage() {
 
 async function Teams() {
   const me = await requireUser();
-  const teams = await db.select().from(team).where(inMyTeams(me.id)).orderBy(team.createdAt);
+  const all = await db.select().from(team).where(inMyTeams(me.id)).orderBy(team.createdAt);
+  const teams = all.filter((t) => !t.archivedAt), archived = all.filter((t) => t.archivedAt);
   const [members, open] = await Promise.all([
     db.select({ teamId: teamMember.teamId, n: count() }).from(teamMember).groupBy(teamMember.teamId),
     db.select({ teamId: task.teamId, n: count() }).from(task).where(and(isNotNull(task.teamId), ne(task.status, "done"))).groupBy(task.teamId),
@@ -64,6 +65,16 @@ async function Teams() {
           </ul>
         )}
       </div>
+      {archived.length > 0 && (
+        <details className="mt-10">
+          <summary className="inline-flex min-h-11 cursor-pointer items-center rounded-[var(--radius)] border border-line px-4 font-medium hover:border-accent-edge">Archived ({archived.length})</summary>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {archived.map((t) => (
+              <li key={t.id}><Link href={`/hive/${t.id}`} className="flex items-center gap-3 rounded-[var(--radius)] border border-line p-4 opacity-80 hover:border-accent-edge hover:opacity-100"><HexBadge label={t.name} color={t.color} size={40} /><span className="min-w-0"><span className="block truncate font-semibold">{t.name}</span><span className="block text-sm text-muted">Archived, read-only</span></span></Link></li>
+            ))}
+          </ul>
+        </details>
+      )}
     </>
   );
 }

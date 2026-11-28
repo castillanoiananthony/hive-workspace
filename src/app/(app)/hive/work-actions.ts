@@ -22,6 +22,7 @@ async function teamTask(userId: string, taskId: string) {
   const [t] = await db.select().from(task).where(eq(task.id, taskId));
   if (!t?.teamId) throw new Error("That task no longer exists.");
   const a = await teamAccess(userId, t.teamId);
+  if (a.team.archivedAt) throw new Error("This hive is archived, so it's read-only.");
   return { t, ...a };
 }
 

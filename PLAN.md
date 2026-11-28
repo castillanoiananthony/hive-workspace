@@ -123,3 +123,60 @@ Each phase: build → run → Playwright test on phone and laptop sizes → acce
 ## 4. Order and size (rough)
 Phase 1: small. Phase 2: large. Phase 3: large (depends on Phase 2's subtasks and contribution log). Phase 4: medium. Phase 5: medium (the daily digest affects Phase 3 announcements). Phase 6: medium.
 I'll do them in the order you gave, and stop after each phase for you to try it.
+
+---
+
+# Phase 1.5: Dev Team & Competition Mode (plan, waiting for approval)
+
+Phases 1–6 are live, so this phase builds on what exists. A "hive" here is a team in The Hive.
+
+## Already there (reused, not rebuilt)
+| Ask | Existing piece it builds on |
+|---|---|
+| Mentor / Adviser: read-only, can comment | **Adviser** access level + task comments (Phase 2). I'll check advisers see the test log and charts too. |
+| Pinned resource library | **Hive Vault** (links grouped by Drive / GitHub / Docs…). Adding: **pin**, and categories (Rules, API docs, Starter code, Judging criteria, Other). |
+| Sprint board | **Kanban board** (Phase 2). Adding a time filter: **This week** / **Next 6 hours** (hackathons). |
+| Owners per checklist item, reminders | Subtasks have one owner and a due date, and Buzz reminds owners (Phase 5). |
+| Export for portfolios | Contribution log + print-to-PDF page (Phase 2). Extending it into a project summary. |
+| Milestones + countdown | Class milestones exist (Phase 3). This adds milestones per hive. |
+
+## New
+1. **Hive templates** at "New team": Hackathon (24–72 hrs), Coding Competition (multi-round), Software Project (sprints), Blank.
+   - Each comes with editable milestones; the Software Project template asks how many sprints.
+   - Hackathon milestones use **date + time** (hour-level).
+   - Table: `hive_milestone` (team, title, due date and time, done time, position) plus `team.kind`.
+2. **Countdown banner** on The Comb to the next milestone: days, or hours and minutes for hackathons. It ticks live on the page.
+3. **Checklists with an owner per item:** a team-level `team_checklist` / `team_checklist_item` (text, owner, done).
+   - Two presets: **Submission** (repo public, README done, demo video uploaded, form submitted) and, for hackathons, **Pitch / demo prep** (problem, solution, demo flow, tech stack slide, team slide).
+   - Fully editable.
+4. **Test & Results Log** (new tab):
+   - Each entry has date, member, version or commit link, pass/fail and notes, plus the hive's own **numeric fields** (e.g. Score, Time (s), Accuracy %), defined in the tab.
+   - Line chart of any field over time, with a **Best version** pin.
+   - Tables: `test_field`, `test_run` (values in JSON).
+5. **Task types:** Task / **Bug** (steps to reproduce, severity, linked test run) / **Feature** / **Decision** (what we chose and why).
+   - Columns on `task`; type icons on the board and list; a Decisions list.
+   - GitHub/GitLab links on a task (branch, commit, PR, issue) are **detected and labelled** automatically.
+6. **Workstreams:** the hive defines tags (Frontend, Backend, AI/Vision…). Tasks and members get them, and there's a "My stream" filter on the board and list. Tables: `team_stream`, plus `task.stream_id` and `team_member.streams`.
+7. **Standup / meeting notes** (new tab). Write notes, and lines like `@Ian fix login bug by Friday` become a task assigned to that person, due on that date, with the normal Buzz email.
+   - The parser matches names and nicknames and uses the same date understanding as quick add.
+   - You see a preview of the tasks it will create before anything is made.
+   - Table: `meeting_note`.
+8. **Judging criteria:** paste the criteria (one per line), then link tasks to each criterion. Criteria with nothing linked are flagged. Tables: `criterion`, `task_criterion`.
+9. **Who's working now:** a "Working now" switch with an optional status line ("debugging the vision model"). It shows on the hive page and in the Comb sidebar.
+   - It switches itself off after 3 hours with no activity.
+   - It refreshes about every minute rather than instantly, so no extra paid service is needed.
+   - Columns on `team_member`.
+10. **Archive + project summary:**
+    - The Leader archives a finished hive: it becomes read-only and moves to an "Archived" list, and can be un-archived.
+    - **Project summary** page: milestones hit (and when), contributions per person, test results with the best version, decisions made. Printable to PDF, made for portfolios and resumes.
+    - Column: `team.archived_at`.
+
+## Decisions I need from you
+1. **Files in the Resource Library.** Storing uploaded files (PDF rules, starter code zips) needs file storage. Vercel Blob is the natural choice and has a small free allowance, but it's a new service. My recommendation: **links only for now** (Drive / GitHub links cover most cases), and add file uploads later if you OK Vercel Blob.
+2. **Who's working now:** OK with "updates about every minute" rather than instant? Instant would need a real-time service.
+3. **Size:** I'd build this in **three steps**, stopping after each for you to try:
+   - **1.5a:** templates, milestones and countdown, checklists, archive and summary.
+   - **1.5b:** Test & Results Log with chart, task types (Bug, Feature, Decision) and git links.
+   - **1.5c:** workstreams, sprint / next-6-hours board, standup notes → tasks, judging criteria, working-now status, Resource Library pins.
+
+Every step: new migrations only, nothing deleted, works on phones, accessibility checked, and your OK before each live database change.

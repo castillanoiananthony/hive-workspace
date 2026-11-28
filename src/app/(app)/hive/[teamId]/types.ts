@@ -1,4 +1,6 @@
-export type TeamT = { id: string; name: string; color: string; digestEnabled: boolean; digestDay: number; joinCode: string | null; app: string; importanceColors: Record<string, string> | null };
+export type TeamT = { id: string; name: string; color: string; digestEnabled: boolean; digestDay: number; joinCode: string | null; app: string; importanceColors: Record<string, string> | null; kind?: string; archived?: string | null };
+export type HiveMilestoneT = { id: string; title: string; dueAt: string | null; hasTime: boolean; done: boolean; date: string | null; time: string | null; label: string | null };
+export type ChecklistT = { id: string; title: string; items: { id: string; text: string; ownerId: string | null; done: boolean; doneBy: string | null }[] };
 export type MemberT = { id: string; userId: string | null; name: string; nickname: string | null; email: string | null; joined: boolean; isAdmin: boolean; roleId: string | null; perms: string[]; parentId: string | null; position: number; avatar: string | null; unsubscribed: boolean; access?: string };
 export type RoleT = { id: string; name: string; perms: string[]; isLeader: boolean };
 export type MeT = { memberId: string; isAdmin: boolean; perms: string[]; access?: string; subtasks?: number };
