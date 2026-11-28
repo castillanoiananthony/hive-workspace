@@ -9,8 +9,13 @@ const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin"] });
 const gabarito = Gabarito({ variable: "--font-gabarito", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://hive-workspace.com"),
   title: { default: "HIVE-WORKSPACE", template: "%s · HIVE-WORKSPACE" },
   description: "Keep your goals visible. Let the team reminders send themselves.",
+  applicationName: "HIVE-WORKSPACE",
+  openGraph: { type: "website", siteName: "HIVE-WORKSPACE", url: "/", images: [{ url: "/icon.png", width: 512, height: 512, alt: "HIVE-WORKSPACE" }] },
+  // Google Search Console: set GOOGLE_SITE_VERIFICATION in Vercel to the code Google gives you
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export const viewport: Viewport = { themeColor: "#17171A", width: "device-width", initialScale: 1, viewportFit: "cover" };

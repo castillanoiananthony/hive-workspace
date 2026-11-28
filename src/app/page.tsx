@@ -8,6 +8,7 @@ import { HeroVisual, MockBuzz, MockCell, MockHive, MockHoneycomb } from "@/compo
 export const metadata: Metadata = {
   title: { absolute: "HIVE-WORKSPACE: goals, team tasks and reminders for students" },
   description: "Keep your goals visible. Let the team reminders send themselves. Free and ad-free, made for Filipino students, groups and orgs.",
+  alternates: { canonical: "/" },
 };
 
 const primary = "inline-flex min-h-12 items-center justify-center rounded-[var(--radius)] bg-accent px-6 font-semibold text-on-accent hover:bg-accent-hover";
