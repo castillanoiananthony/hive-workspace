@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/app/BackButton";
 import { HexCheck } from "@/components/app/HexCheck";
 import { TaskExtras, type Extras } from "./TaskExtras";
+import { gitLink } from "@/lib/git-link";
 import { deleteTask, saveTask, type TaskDoc } from "../../cell/actions";
 import { saveAsTemplate, sendAssignmentEmails } from "../../hive/actions";
 
@@ -19,7 +20,7 @@ const STATUS: { id: TaskDoc["status"]; label: string; team?: boolean }[] = [
 
 type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; canApprove: boolean; members: { id: string; name: string }[]; done: string[]; notified: string[] };
 
-export function TaskEditor({ id, initial, goals, team, extras, subjects = [] }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null; subjects?: { id: string; code: string; color: string }[] }) {
+export function TaskEditor({ id, initial, goals, team, extras, subjects = [], runs = [] }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null; subjects?: { id: string; code: string; color: string }[]; runs?: { id: string; label: string }[] }) {
   const router = useRouter();
   const [doc, setDoc] = useState<TaskDoc>(initial);
   const [save, setSave] = useState<Save>("saved");
@@ -161,6 +162,18 @@ export function TaskEditor({ id, initial, goals, team, extras, subjects = [] }: 
             ))}
           </div>
         </dd>
+        {team && (
+          <>
+            <dt className="self-center text-sm text-muted">Type</dt>
+            <dd>
+              <div role="radiogroup" aria-label="Type" className="flex flex-wrap gap-2">
+                {([["task", "Task"], ["bug", "🐞 Bug"], ["feature", "✨ Feature"], ["decision", "⚖ Decision"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" role="radio" aria-checked={(doc.type ?? "task") === v} onClick={() => update({ type: v })} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium aria-checked:border-accent-edge aria-checked:bg-raised">{l}</button>
+                ))}
+              </div>
+            </dd>
+          </>
+        )}
         <dt className="self-center text-sm text-muted">Importance</dt>
         <dd>
           <div role="radiogroup" aria-label="Importance" className="flex flex-wrap gap-2">
@@ -281,7 +294,7 @@ export function TaskEditor({ id, initial, goals, team, extras, subjects = [] }: 
               <input aria-label={`Link ${i + 1} name`} placeholder="Name" value={l.title} onChange={(e) => update({ links: doc.links.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} className={field} />
               <input aria-label={`Link ${i + 1} address`} type="url" placeholder="https://" value={l.url} onChange={(e) => update({ links: doc.links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} className={field} />
               <div className="flex">
-                {/^https?:\/\//.test(l.url) && <a href={l.url} target="_blank" rel="noreferrer noopener" className="grid min-h-11 place-items-center px-3 text-sm text-accent-text">Open</a>}
+                {/^https?:\/\//.test(l.url) && <a href={l.url} target="_blank" rel="noreferrer noopener" className="grid min-h-11 place-items-center px-3 text-sm text-accent-text">{gitLink(l.url)?.label ?? "Open"}</a>}
                 <button type="button" aria-label={`Remove link ${i + 1}`} title="Remove" onClick={() => update({ links: doc.links.filter((_, j) => j !== i) })} className="size-11 text-muted hover:text-danger">×</button>
               </div>
             </li>
@@ -291,6 +304,29 @@ export function TaskEditor({ id, initial, goals, team, extras, subjects = [] }: 
         {note && <p role="status" className="mt-2 text-sm text-danger">{note}</p>}
       </section>
 
+      {team && doc.type === "bug" && (
+        <section aria-labelledby="bug-h" className="mt-8 grid gap-3 rounded-[var(--radius)] border border-[#E5484D]/60 p-4">
+          <h2 id="bug-h" className="font-display text-lg font-semibold">🐞 Bug details</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1"><span className="text-sm font-medium">Severity</span>
+              <select value={doc.severity ?? ""} onChange={(e) => update({ severity: e.target.value || null })} className={field}><option value="">Not set</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select>
+            </label>
+            <label className="grid gap-1"><span className="text-sm font-medium">Seen in test run</span>
+              <select value={doc.testRunId ?? ""} onChange={(e) => update({ testRunId: e.target.value || null })} className={field}><option value="">None</option>{runs.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}</select>
+            </label>
+          </div>
+          <label className="grid gap-1"><span className="text-sm font-medium">Steps to reproduce</span>
+            <textarea value={doc.steps ?? ""} onChange={(e) => update({ steps: e.target.value })} rows={4} maxLength={4000} placeholder={"1. Open the login page\n2. Enter a wrong password\n3. The app freezes"} className="rounded-[var(--radius)] border border-line bg-bg px-3 py-2 text-base focus:border-accent-edge" />
+          </label>
+        </section>
+      )}
+      {team && doc.type === "decision" && (
+        <section aria-labelledby="dec-h" className="mt-8 grid gap-3 rounded-[var(--radius)] border border-[#8B5CF6]/60 p-4">
+          <h2 id="dec-h" className="font-display text-lg font-semibold">⚖ Decision</h2>
+          <label className="grid gap-1"><span className="text-sm font-medium">What we chose</span><input value={doc.decision ?? ""} onChange={(e) => update({ decision: e.target.value })} maxLength={1000} placeholder="Use YOLOv8 for object detection" className={field} /></label>
+          <label className="grid gap-1"><span className="text-sm font-medium">Why</span><textarea value={doc.rationale ?? ""} onChange={(e) => update({ rationale: e.target.value })} rows={3} maxLength={4000} placeholder="Faster on the robot's CPU than the alternatives we tried" className="rounded-[var(--radius)] border border-line bg-bg px-3 py-2 text-base focus:border-accent-edge" /></label>
+        </section>
+      )}
       {extras && <TaskExtras {...extras} />}
 
       <div className="mt-12 border-t border-line pt-6">

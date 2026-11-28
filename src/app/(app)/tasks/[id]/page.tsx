@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, subject, subtask, task, taskComment, taskLink, team, teamMember } from "@/db/schema";
+import { assignment, checklistItem, goal, subject, subtask, task, taskComment, taskLink, team, teamMember, testRun } from "@/db/schema";
 import { formatDue, utcToZoned } from "@/lib/dates";
 import { docToHtml } from "@/lib/doc-to-html";
 import { can, canComment } from "@/lib/hive-perms";
@@ -48,6 +48,7 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
         due={t.dueAt ? formatDue(t.dueAt, t.hasTime, me.timezone) : null} checklist={items.map((c) => c.text)} links={links.map((l) => ({ title: l.title, url: l.url }))}
         assigned={mine.length > 0} done={Boolean(mine[0]?.doneAt)} status={t.status} canApprove={can(access.me, "approve")}
         ownsSubtask={extras!.subtasks.some((x) => x.ownerId === access.me.id)} extras={extras!}
+        dev={{ type: t.type, severity: t.severity, steps: t.steps, decision: t.decision, rationale: t.rationale, run: t.testRunId ? (await db.select({ at: testRun.ranAt, version: testRun.version, result: testRun.result }).from(testRun).where(eq(testRun.id, t.testRunId)))[0] ?? null : null }}
       />
     );
   }
@@ -58,6 +59,8 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
         assigned: await db.select({ memberId: assignment.memberId, doneAt: assignment.doneAt, notifiedAt: assignment.notifiedAt }).from(assignment).where(eq(assignment.taskId, t.id)),
       }
     : null;
+  const runs = t.teamId ? await db.select({ id: testRun.id, at: testRun.ranAt, version: testRun.version, result: testRun.result }).from(testRun).where(eq(testRun.teamId, t.teamId)).orderBy(desc(testRun.ranAt)).limit(50) : [];
+  const runOptions = runs.map((r) => ({ id: r.id, label: `${formatDue(r.at, true, me.timezone)}${r.version ? `, ${r.version.replace(/^https?:\/\/(www\.)?/, "").slice(0, 40)}` : ""}${r.result ? `, ${r.result}` : ""}` }));
   const [items, links, goals, subjects] = await Promise.all([
     db.select().from(checklistItem).where(eq(checklistItem.taskId, id)).orderBy(asc(checklistItem.position)),
     db.select().from(taskLink).where(eq(taskLink.taskId, id)).orderBy(asc(taskLink.position)),
@@ -71,13 +74,14 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
       goals={goals}
       extras={extras}
       subjects={subjects}
+      runs={runOptions}
       team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, importanceColors: teamInfo.importanceColors ?? null, canApprove: access ? can(access.me, "approve") : false, members: teamInfo.members.filter((m) => m.access === "member" || teamInfo.assigned.some((x) => x.memberId === m.id)).map(({ id, name }) => ({ id, name })), done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
       initial={{
         title: t.title, notes: t.notes ?? null, status: t.status, importance: t.importance, subjectId: t.subjectId, isExam: t.isExam, goalId: t.goalId,
         dueDate: due?.date ?? null, dueTime: t.hasTime ? due!.time : null,
         checklist: items.map((c) => ({ text: c.text, done: c.done })),
         links: links.map((l) => ({ title: l.title, url: l.url })),
-        ...(teamInfo ? { howTo: t.howTo ?? null, assignees: teamInfo.assigned.map((a) => a.memberId) } : {}),
+        ...(teamInfo ? { howTo: t.howTo ?? null, assignees: teamInfo.assigned.map((a) => a.memberId), type: t.type, severity: t.severity, steps: t.steps, testRunId: t.testRunId, decision: t.decision, rationale: t.rationale } : {}),
       }}
     />
   );

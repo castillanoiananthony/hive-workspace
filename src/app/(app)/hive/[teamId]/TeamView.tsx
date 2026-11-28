@@ -18,6 +18,7 @@ import { Activity, type DayT } from "./Activity";
 import { HiveCalendar, type CalTask } from "../../calendar/HiveCalendar";
 import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT, type ContributionT, type HiveMilestoneT, type ChecklistT } from "./types";
 import { Countdown, Plan } from "./Plan";
+import { TestLog, type TestFieldT, type TestRunT } from "./TestLog";
 import { setArchived } from "../dev-actions";
 
 type Team = TeamT;
@@ -26,11 +27,11 @@ type Task = TaskT;
 type Assigned = AssignedT;
 type Template = { id: string; title: string; recurrence: "none" | "weekly" | "monthly"; weekday: number | null; monthDay: number | null; dueTime: string | null; assignAll: boolean; memberIds: string[]; checklist: number; links: number };
 type LogRow = { id: string; kind: "assign" | "remind3" | "remind1" | "digest" | "invite" | "announce" | "remind0" | "help" | "daily" | "subtask"; recipient: string; status: "queued" | "sent" | "failed"; error: string | null; at: string; name: string | null; task: string | null };
-type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; hiveMilestones?: HiveMilestoneT[]; checklists?: ChecklistT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
+type Props = { team: Team; members: Member[]; roles: RoleT[]; me: MeT; tasks: Task[]; assigned: Assigned[]; stream: StreamT[]; templates: Template[]; log: LogRow[]; links: VaultLink[]; tz: string; days: DayT[]; calendar: CalTask[]; logs: LogT[]; contributions?: ContributionT[]; hiveMilestones?: HiveMilestoneT[]; checklists?: ChecklistT[]; testFields?: TestFieldT[]; testRuns?: TestRunT[]; colonyInfo?: { id: string; name: string; milestones: { id: string; title: string; date: string; label: string }[] } | null };
 
 // tabs a member can see; some only appear with the matching power
 const TABS: { id: string; label: string; need?: string }[] = [
-  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "plan", label: "Milestones" }, { id: "calendar", label: "Calendar" }, { id: "activity", label: "Activity" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
+  { id: "comb", label: "The Comb" }, { id: "board", label: "Tasks" }, { id: "plan", label: "Milestones" }, { id: "tests", label: "Tests" }, { id: "calendar", label: "Calendar" }, { id: "activity", label: "Activity" }, { id: "vault", label: "Hive Vault" }, { id: "hierarchy", label: "Hierarchy" }, { id: "members", label: "Members" },
   { id: "templates", label: "Templates", need: "templates" }, { id: "log", label: "Email log", need: "log" }, { id: "settings", label: "Team settings", need: "settings" },
 ];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -82,6 +83,7 @@ export function TeamView(props: Props) {
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-6">
+        {tab === "tests" && <TestLog team={team} me={me} members={members} fields={props.testFields ?? []} runs={props.testRuns ?? []} />}
         {tab === "plan" && <Plan team={team} me={me} members={members} milestones={props.hiveMilestones ?? []} checklists={props.checklists ?? []} />}
         {tab === "comb" && <><Countdown milestones={props.hiveMilestones ?? []} hourly={team.kind === "hackathon"} /></>}
         {tab === "comb" && <Comb team={team} members={members} tasks={tasks} stream={props.stream} me={me} />}

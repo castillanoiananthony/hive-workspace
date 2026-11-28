@@ -5,8 +5,9 @@ import { Suspense } from "react";
 import { BackButton } from "@/components/app/BackButton";
 import { HoneyLoader } from "@/components/app/HoneyLoader";
 import { db } from "@/db";
-import { contribution, hiveMilestone, task, teamChecklist, teamChecklistItem, teamMember } from "@/db/schema";
+import { contribution, hiveMilestone, task, teamChecklist, teamChecklistItem, teamMember, testField, testRun } from "@/db/schema";
 import { formatDue } from "@/lib/dates";
+import { gitLink } from "@/lib/git-link";
 import { requireUser } from "@/lib/session";
 import { teamAccess } from "@/lib/teams";
 import { PrintButton } from "../contributions/PrintButton";
@@ -30,13 +31,15 @@ async function Summary({ params }: { params: PageProps<"/hive/[teamId]/summary">
   const a = await teamAccess(me.id, teamId).catch(() => null);
   if (!a || a.me.access === "guest") notFound();
   const t = a.team;
-  const [members, milestones, tasks, contribs, lists, items] = await Promise.all([
+  const [members, milestones, tasks, contribs, lists, items, fields, runs] = await Promise.all([
     db.select().from(teamMember).where(and(eq(teamMember.teamId, teamId), ne(teamMember.access, "guest"))).orderBy(asc(teamMember.name)),
     db.select().from(hiveMilestone).where(eq(hiveMilestone.teamId, teamId)).orderBy(asc(hiveMilestone.dueAt), asc(hiveMilestone.position)),
-    db.select({ status: task.status }).from(task).where(eq(task.teamId, teamId)),
+    db.select({ status: task.status, type: task.type, title: task.title, decision: task.decision, rationale: task.rationale }).from(task).where(eq(task.teamId, teamId)),
     db.select().from(contribution).where(eq(contribution.teamId, teamId)),
     db.select().from(teamChecklist).where(eq(teamChecklist.teamId, teamId)).orderBy(asc(teamChecklist.position)),
     db.select({ i: teamChecklistItem }).from(teamChecklistItem).innerJoin(teamChecklist, eq(teamChecklistItem.checklistId, teamChecklist.id)).where(eq(teamChecklist.teamId, teamId)),
+    db.select().from(testField).where(eq(testField.teamId, teamId)).orderBy(asc(testField.position)),
+    db.select().from(testRun).where(eq(testRun.teamId, teamId)).orderBy(asc(testRun.ranAt)),
   ]);
   const fmt = (d: Date, time = false) => formatDue(d, time, me.timezone);
   const name = (m: typeof members[number]) => m.nickname?.trim() || m.name;
@@ -84,6 +87,24 @@ async function Summary({ params }: { params: PageProps<"/hive/[teamId]/summary">
             <tbody>{people.map((p) => <tr key={p.m.id} className="border-b border-line"><td className="py-2 pr-3 font-medium">{name(p.m)}{p.m.isAdmin ? " (leader)" : ""}</td><td className="py-2 pr-3 tabular-nums">{p.parts}</td><td className="py-2 pr-3 tabular-nums">{p.subs}</td><td className="py-2 tabular-nums">{p.approved}</td></tr>)}</tbody>
           </table>
         </section>
+        {runs.length > 0 && (() => {
+          const best = runs.find((r) => r.isBest);
+          const top = fields.map((f) => { const vs = runs.map((r) => r.values[f.id]).filter((v): v is number => typeof v === "number"); return vs.length ? { f, first: vs[0], best: f.higherIsBetter ? Math.max(...vs) : Math.min(...vs) } : null; }).filter((x): x is NonNullable<typeof x> => Boolean(x));
+          const graded = runs.filter((r) => r.result);
+          return (
+            <section aria-labelledby="sm-tests">
+              <h2 id="sm-tests" className="font-display text-xl font-semibold">Results</h2>
+              <p className="mt-1 text-muted">{runs.length} test runs logged{graded.length ? `, ${Math.round((100 * graded.filter((r) => r.result === "pass").length) / graded.length)}% passed` : ""}.{best ? ` Best version: ${(best.version && gitLink(best.version)?.label) ?? best.version ?? fmt(best.ranAt, true)}.` : ""}</p>
+              {top.length > 0 && <ul className="mt-3 grid gap-1">{top.map(({ f, first, best: b }) => <li key={f.id} className="flex justify-between border-b border-line py-2"><span className="font-medium">{f.name}</span><span className="tabular-nums text-muted">first {first}{f.unit ?? ""} → best {b}{f.unit ?? ""}</span></li>)}</ul>}
+            </section>
+          );
+        })()}
+        {tasks.some((x) => x.type === "decision") && (
+          <section aria-labelledby="sm-dec">
+            <h2 id="sm-dec" className="font-display text-xl font-semibold">Key decisions</h2>
+            <ul className="mt-3 grid gap-3">{tasks.filter((x) => x.type === "decision").map((x, i) => <li key={i}><p className="font-medium">{x.decision || x.title}</p>{x.rationale && <p className="text-sm text-muted">{x.rationale}</p>}</li>)}</ul>
+          </section>
+        )}
         {lists.length > 0 && (
           <section aria-labelledby="sm-cl">
             <h2 id="sm-cl" className="font-display text-xl font-semibold">Checklists</h2>

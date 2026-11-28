@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { ImportanceTag } from "@/components/app/ImportanceTag";
+import { TypeTag } from "@/components/app/TypeTag";
 import { formatDue } from "@/lib/dates";
 import { importanceOf } from "@/lib/importance";
 import { moveTeamTask } from "../work-actions";
@@ -66,6 +67,7 @@ export function Kanban({ team, tasks, members, assigned, me, tz }: { team: TeamT
                       <Link href={`/tasks/${t.id}`} className="min-w-0 flex-1 font-medium break-words hover:underline">{t.title || "Untitled task"}</Link>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-11 text-sm text-muted">
+                      <TypeTag type={t.type} />
                       <ImportanceTag level={t.importance} colors={team.importanceColors} />
                       {t.dueAt && <span>{formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}
                       {t.subtasks && t.subtasks.total > 0 && <span>{t.subtasks.done}/{t.subtasks.total} subtasks</span>}

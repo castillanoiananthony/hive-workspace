@@ -42,6 +42,13 @@ export function Activity({ team, tasks, assigned, members, days, logs, tz, contr
         <h2 id="line-h" className="font-display text-lg font-semibold">The last 14 days</h2>
         <Lines days={days} />
       </section>
+      {tasks.some((t) => t.type === "decision") && (
+        <section aria-labelledby="dec-log-h" className={card}>
+          <h2 id="dec-log-h" className="font-display text-lg font-semibold">Decision log</h2>
+          <p className="text-sm text-muted">What the team chose and why. Open one to read the reasoning.</p>
+          <ul className="mt-3 grid gap-2">{tasks.filter((t) => t.type === "decision").map((t) => <li key={t.id}><Link href={`/tasks/${t.id}`} className="flex items-center gap-2 rounded-[var(--radius)] border border-line px-3 py-2 hover:border-accent-edge"><span aria-hidden>⚖</span><span className="min-w-0 flex-1 truncate font-medium">{t.title || "Untitled decision"}</span>{t.dueAt && <span className="text-sm text-muted">{fmtDay(t.dueAt, tz).split(",")[0]}</span>}</Link></li>)}</ul>
+        </section>
+      )}
       <ContributionLog team={team} members={members} contributions={contributions} tz={tz} />
       <TaskProgress team={team} tasks={tasks} assigned={assigned} members={members} logs={logs} tz={tz} />
       <AllLogs tasks={tasks} members={members} logs={logs} tz={tz} color={team.color} />

@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, subject, task, taskLink, teamMember } from "@/db/schema";
+import { assignment, checklistItem, goal, subject, task, taskLink, teamMember, testRun } from "@/db/schema";
 import { newToken } from "@/lib/tokens";
 import { requirePerm, teamAccess } from "@/lib/teams";
 import { can } from "@/lib/hive-perms";
@@ -38,6 +38,23 @@ async function ownSubject(userId: string, id: string | null | undefined) {
   if (!id) return null;
   const [s] = await db.select({ id: subject.id }).from(subject).where(and(eq(subject.id, id), eq(subject.ownerId, userId)));
   return s?.id ?? null;
+}
+
+/** Bug / Feature / Decision details for a team task. A linked test run must belong to the same hive. */
+async function devFields(teamId: string, doc: TaskDoc) {
+  const type = (["task", "bug", "feature", "decision"] as const).find((t) => t === doc.type) ?? "task";
+  let testRunId: string | null = null;
+  if (type === "bug" && doc.testRunId) {
+    const [r] = await db.select({ id: testRun.id }).from(testRun).where(and(eq(testRun.id, String(doc.testRunId)), eq(testRun.teamId, teamId)));
+    testRunId = r?.id ?? null;
+  }
+  const t = (s: unknown, n: number) => (typeof s === "string" ? s.trim().slice(0, n) || null : null);
+  return {
+    type,
+    severity: type === "bug" ? (["low", "medium", "high", "critical"] as const).find((x) => x === doc.severity) ?? null : null,
+    steps: type === "bug" ? t(doc.steps, 4000) : null, testRunId,
+    decision: type === "decision" ? t(doc.decision, 1000) : null, rationale: type === "decision" ? t(doc.rationale, 4000) : null,
+  };
 }
 
 const touchGoal = (id: string | null) => (id ? db.update(goal).set({ lastActivityAt: new Date() }).where(eq(goal.id, id)) : null);
@@ -152,6 +169,7 @@ export type TaskDoc = {
   subjectId?: string | null; // personal tasks only
   isExam?: boolean;
   howTo?: unknown; // team tasks: "How to do it"
+  type?: "task" | "bug" | "feature" | "decision"; severity?: string | null; steps?: string | null; testRunId?: string | null; decision?: string | null; rationale?: string | null; // team dev tasks
   assignees?: string[]; // team tasks: roster member ids
 };
 
@@ -186,7 +204,7 @@ export async function saveTask(id: string, doc: TaskDoc) {
       ...(before.teamId ? {} : { subjectId: await ownSubject(me.id, doc.subjectId ?? null), isExam: Boolean(doc.isExam) }),
       title: text(doc.title), notes: doc.notes ?? null, status, doneAt: doneAtFor(status), importance: [1, 2, 3].includes(Number(doc.importance)) ? Number(doc.importance) : 0,
       dueAt, hasTime: Boolean(dueAt && doc.dueTime), goalId: parent?.id ?? null,
-      ...(before.teamId ? { howTo: doc.howTo ?? null } : {}),
+      ...(before.teamId ? { howTo: doc.howTo ?? null, ...(await devFields(before.teamId, doc)) } : {}),
     }).where(eq(task.id, id));
     if (before.teamId && doc.assignees) {
       // keep existing assignments (their done state and email links), add new ones, drop removed ones

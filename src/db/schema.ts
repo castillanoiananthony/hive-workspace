@@ -125,6 +125,12 @@ export const task = pgTable("task", {
   subjectId: text("subject_id").references((): AnyPgColumn => subject.id, { onDelete: "set null" }), // personal tasks: e.g. "ASE 111"
   isExam: boolean("is_exam").notNull().default(false), // pinned as a countdown in My Cell
   doneAt: timestamp("done_at", { withTimezone: true }), // when it was finished (feeds Nectar)
+  type: text("type").$type<"task" | "bug" | "feature" | "decision">().notNull().default("task"), // team tasks
+  severity: text("severity").$type<"low" | "medium" | "high" | "critical">(), // bugs
+  steps: text("steps"), // bugs: steps to reproduce
+  testRunId: text("test_run_id").references((): AnyPgColumn => testRun.id, { onDelete: "set null" }), // bugs: the run that showed it
+  decision: text("decision"), // decisions: what we chose
+  rationale: text("rationale"), // decisions: why
   createdAt: created(),
   updatedAt: updated(),
 }, (t) => [index("task_owner_idx").on(t.ownerId), index("task_team_idx").on(t.teamId), index("task_goal_idx").on(t.goalId), index("task_due_idx").on(t.dueAt)]);
@@ -434,3 +440,26 @@ export const teamChecklistItem = pgTable("team_checklist_item", {
   doneById: text("done_by_id").references(() => teamMember.id, { onDelete: "set null" }),
   position: integer("position").notNull().default(0),
 }, (t) => [index("team_checklist_item_idx").on(t.checklistId)]);
+
+// Test & Results Log: the hive's own numeric fields, and one row per test run / build / attempt.
+export const testField = pgTable("test_field", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // "Score", "Time", "Accuracy"
+  unit: text("unit"), // "s", "%", "ms"
+  higherIsBetter: boolean("higher_is_better").notNull().default(true),
+  position: integer("position").notNull().default(0),
+}, (t) => [index("test_field_team_idx").on(t.teamId)]);
+
+export const testRun = pgTable("test_run", {
+  id: id(),
+  teamId: text("team_id").notNull().references(() => team.id, { onDelete: "cascade" }),
+  memberId: text("member_id").references(() => teamMember.id, { onDelete: "set null" }),
+  ranAt: timestamp("ran_at", { withTimezone: true }).notNull().defaultNow(),
+  version: text("version"), // a tag, or a commit / PR / branch link
+  result: text("result").$type<"pass" | "fail">(),
+  notes: text("notes"),
+  values: jsonb("values").$type<Record<string, number>>().notNull().default({}), // test_field id → number
+  isBest: boolean("is_best").notNull().default(false),
+  createdAt: created(),
+}, (t) => [index("test_run_team_idx").on(t.teamId, t.ranAt)]);
