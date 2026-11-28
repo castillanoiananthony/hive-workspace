@@ -1,0 +1,1 @@
+ALTER TABLE "team" ADD COLUMN "task_types" jsonb DEFAULT '[]'::jsonb NOT NULL;

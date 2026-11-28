@@ -9,7 +9,7 @@ import { TypeTag } from "@/components/app/TypeTag";
 import { gitLink } from "@/lib/git-link";
 
 /** A team task for members who can't edit tasks: read the steps and tick your own part. */
-export function TeamTaskView(p: { id: string; team: { id: string; name: string }; title: string; howToHtml: string; due: string | null; checklist: string[]; links: { title: string; url: string }[]; assigned: boolean; done: boolean; status: "todo" | "doing" | "review" | "done"; canApprove: boolean; ownsSubtask: boolean; extras: Extras; dev?: { type: string; severity: string | null; steps: string | null; decision: string | null; rationale: string | null; run: { at: Date; version: string | null; result: string | null } | null } }) {
+export function TeamTaskView(p: { id: string; team: { id: string; name: string }; title: string; howToHtml: string; due: string | null; checklist: string[]; links: { title: string; url: string }[]; assigned: boolean; done: boolean; status: "todo" | "doing" | "review" | "done"; canApprove: boolean; ownsSubtask: boolean; extras: Extras; dev?: { customTypes?: { id: string; label: string; color: string }[]; type: string; severity: string | null; steps: string | null; decision: string | null; rationale: string | null; run: { at: Date; version: string | null; result: string | null } | null } }) {
   const router = useRouter();
   const [done, setDone] = useState(p.done);
   const [pending, start] = useTransition();
@@ -19,7 +19,7 @@ export function TeamTaskView(p: { id: string; team: { id: string; name: string }
       <p className="text-sm text-muted">{p.team.name}</p>
       <h1 className="font-display mt-1 text-3xl font-semibold sm:text-4xl">{p.title || "Untitled task"}</h1>
       {p.due && <p className="mt-2"><span className="font-medium">Due:</span> {p.due}</p>}
-      {p.dev?.type && p.dev.type !== "task" && <p className="mt-2"><TypeTag type={p.dev.type} />{p.dev.severity && <span className="ml-2 text-sm text-muted">Severity: {p.dev.severity}</span>}</p>}
+      {p.dev?.type && p.dev.type !== "task" && <p className="mt-2"><TypeTag type={p.dev.type} custom={p.dev.customTypes} />{p.dev.severity && <span className="ml-2 text-sm text-muted">Severity: {p.dev.severity}</span>}</p>}
       <StatusRow id={p.id} status={p.status} canMove={p.assigned || p.ownsSubtask || p.canApprove} canApprove={p.canApprove} />
       {p.assigned ? (
         <div className="mt-5 flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-line bg-surface p-4">
@@ -34,7 +34,7 @@ export function TeamTaskView(p: { id: string; team: { id: string; name: string }
       {p.checklist.length > 0 && (<section className="mt-8"><h2 className="font-display text-lg font-semibold">Checklist</h2><ul className="mt-2 list-disc pl-6">{p.checklist.map((c, i) => <li key={i}>{c}</li>)}</ul></section>)}
       {p.links.length > 0 && (<section className="mt-8"><h2 className="font-display text-lg font-semibold">Links</h2><ul className="mt-2 grid gap-1">{p.links.map((l, i) => <li key={i}><a href={l.url} target="_blank" rel="noreferrer noopener" className="text-accent-text underline underline-offset-4">{l.title}</a>{gitLink(l.url) && <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs font-semibold">{gitLink(l.url)!.label}</span>}</li>)}</ul></section>)}
       {p.dev?.type === "bug" && (p.dev.steps || p.dev.run) && (<section className="mt-8"><h2 className="font-display text-lg font-semibold">Steps to reproduce</h2>{p.dev.steps && <p className="mt-2 whitespace-pre-line">{p.dev.steps}</p>}{p.dev.run && <p className="mt-2 text-sm text-muted">Seen in the test run of {new Date(p.dev.run.at).toLocaleString("en", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}{p.dev.run.version ? `, ${p.dev.run.version}` : ""}{p.dev.run.result ? ` (${p.dev.run.result})` : ""}</p>}</section>)}
-      {p.dev?.type === "decision" && p.dev.decision && (<section className="mt-8 rounded-[var(--radius)] border border-[#8B5CF6]/60 p-4"><h2 className="font-display text-lg font-semibold">⚖ We chose</h2><p className="mt-1 font-medium">{p.dev.decision}</p>{p.dev.rationale && <p className="mt-2 whitespace-pre-line text-muted">Why: {p.dev.rationale}</p>}</section>)}
+      {p.dev?.type === "decision" && p.dev.decision && (<section className="mt-8 rounded-[var(--radius)] border border-[#8B5CF6]/60 p-4"><h2 className="font-display text-lg font-semibold">We chose</h2><p className="mt-1 font-medium">{p.dev.decision}</p>{p.dev.rationale && <p className="mt-2 whitespace-pre-line text-muted">Why: {p.dev.rationale}</p>}</section>)}
       <TaskExtras {...p.extras} />
     </article>
   );

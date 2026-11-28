@@ -18,6 +18,7 @@ import { Activity, type DayT } from "./Activity";
 import { HiveCalendar, type CalTask } from "../../calendar/HiveCalendar";
 import { has, nameOf, type AssignedT, type MeT, type MemberT, type RoleT, type StreamT, type TaskT, type TeamT, type LogT, type ContributionT, type HiveMilestoneT, type ChecklistT, type StreamTagT, type NoteT, type CriterionT } from "./types";
 import { Standups } from "./Standups";
+import { TaskTypes } from "./TaskTypes";
 import { WorkingNow } from "./WorkingNow";
 import { Countdown, Plan } from "./Plan";
 import { TestLog, type TestFieldT, type TestRunT } from "./TestLog";
@@ -256,6 +257,7 @@ function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: Ro
         <div className="flex items-center gap-3"><button disabled={pending} className={btnPrimary}>Save changes</button><p role="status" className="text-sm text-muted">{msg}</p></div>
       </form>}
 
+      {has(me, "tasks") && !team.archived && <TaskTypes team={team} />}
       {me.isAdmin && <Roles team={team} roles={roles} members={members} />}
 
       <BusyOverlay show={deleting} label="Deleting the team…" />

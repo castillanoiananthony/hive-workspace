@@ -28,7 +28,7 @@ export default function TaskPage({ params }: PageProps<"/tasks/[id]">) {
 async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) {
   const { id } = await params;
   const me = await requireUser();
-  const [hit] = await db.select({ t: task, team: { id: team.id, name: team.name, color: team.color, importanceColors: team.importanceColors } }).from(task).leftJoin(team, eq(task.teamId, team.id)).where(eq(task.id, id));
+  const [hit] = await db.select({ t: task, team: { id: team.id, name: team.name, color: team.color, importanceColors: team.importanceColors, taskTypes: team.taskTypes } }).from(task).leftJoin(team, eq(task.teamId, team.id)).where(eq(task.id, id));
   if (!hit) notFound();
   const t = hit.t;
   // personal tasks: only their owner. Team tasks: members can read; people with "Create & assign tasks" can edit.
@@ -48,13 +48,13 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
         due={t.dueAt ? formatDue(t.dueAt, t.hasTime, me.timezone) : null} checklist={items.map((c) => c.text)} links={links.map((l) => ({ title: l.title, url: l.url }))}
         assigned={mine.length > 0} done={Boolean(mine[0]?.doneAt)} status={t.status} canApprove={can(access.me, "approve")}
         ownsSubtask={extras!.subtasks.some((x) => x.ownerId === access.me.id)} extras={extras!}
-        dev={{ type: t.type, severity: t.severity, steps: t.steps, decision: t.decision, rationale: t.rationale, run: t.testRunId ? (await db.select({ at: testRun.ranAt, version: testRun.version, result: testRun.result }).from(testRun).where(eq(testRun.id, t.testRunId)))[0] ?? null : null }}
+        dev={{ customTypes: hit.team?.taskTypes ?? [], type: t.type, severity: t.severity, steps: t.steps, decision: t.decision, rationale: t.rationale, run: t.testRunId ? (await db.select({ at: testRun.ranAt, version: testRun.version, result: testRun.result }).from(testRun).where(eq(testRun.id, t.testRunId)))[0] ?? null : null }}
       />
     );
   }
   const teamInfo = t.teamId && hit.team
     ? {
-        id: hit.team.id, name: hit.team.name, color: hit.team.color, importanceColors: hit.team.importanceColors,
+        id: hit.team.id, name: hit.team.name, color: hit.team.color, importanceColors: hit.team.importanceColors, taskTypes: hit.team.taskTypes ?? [],
         members: await db.select({ id: teamMember.id, name: sql<string>`coalesce(nullif(${teamMember.nickname}, ''), ${teamMember.name})`, access: teamMember.access }).from(teamMember).where(eq(teamMember.teamId, t.teamId)).orderBy(asc(teamMember.name)),
         assigned: await db.select({ memberId: assignment.memberId, doneAt: assignment.doneAt, notifiedAt: assignment.notifiedAt }).from(assignment).where(eq(assignment.taskId, t.id)),
       }
@@ -77,7 +77,7 @@ async function Task({ params }: { params: PageProps<"/tasks/[id]">["params"] }) 
       subjects={subjects}
       runs={runOptions}
       streams={streamOptions}
-      team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, importanceColors: teamInfo.importanceColors ?? null, canApprove: access ? can(access.me, "approve") : false, members: teamInfo.members.filter((m) => m.access === "member" || teamInfo.assigned.some((x) => x.memberId === m.id)).map(({ id, name }) => ({ id, name })), done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
+      team={teamInfo && { id: teamInfo.id, name: teamInfo.name, color: teamInfo.color, importanceColors: teamInfo.importanceColors ?? null, taskTypes: teamInfo.taskTypes, canApprove: access ? can(access.me, "approve") : false, members: teamInfo.members.filter((m) => m.access === "member" || teamInfo.assigned.some((x) => x.memberId === m.id)).map(({ id, name }) => ({ id, name })), done: teamInfo.assigned.filter((a) => a.doneAt).map((a) => a.memberId), notified: teamInfo.assigned.filter((a) => a.notifiedAt).map((a) => a.memberId) }}
       initial={{
         title: t.title, notes: t.notes ?? null, status: t.status, importance: t.importance, subjectId: t.subjectId, isExam: t.isExam, goalId: t.goalId,
         dueDate: due?.date ?? null, dueTime: t.hasTime ? due!.time : null,

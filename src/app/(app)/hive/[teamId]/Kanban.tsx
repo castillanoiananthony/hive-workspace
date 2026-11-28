@@ -67,7 +67,7 @@ export function Kanban({ team, tasks, members, assigned, me, tz, streams = [] }:
                       <Link href={`/tasks/${t.id}`} className="min-w-0 flex-1 font-medium break-words hover:underline">{t.title || "Untitled task"}</Link>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-11 text-sm text-muted">
-                      <TypeTag type={t.type} />
+                      <TypeTag type={t.type} custom={team.taskTypes} />
                       {(() => { const st = streams.find((x) => x.id === t.streamId); return st ? <span className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-xs font-semibold"><span aria-hidden className="size-2 rounded-full" style={{ background: st.color }} />{st.name}</span> : null; })()}
                       <ImportanceTag level={t.importance} colors={team.importanceColors} />
                       {t.dueAt && <span>{formatDue(new Date(t.dueAt), t.hasTime, tz)}</span>}

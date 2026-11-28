@@ -109,7 +109,7 @@ export function Board({ team, members, tasks, assigned, logs, tz, me, onRoster, 
                 <span className="flex items-center gap-3">
                   <Chevron />
                   <span className="min-w-0 flex-1 font-medium">{t.title || "Untitled task"}</span>
-                  <TypeTag type={t.type} />
+                  <TypeTag type={t.type} custom={team.taskTypes} />
                   <ImportanceTag level={t.importance} colors={team.importanceColors} />
                 </span>
                 <span className="flex flex-wrap items-center gap-x-4 gap-y-1 pl-8 text-sm text-muted">

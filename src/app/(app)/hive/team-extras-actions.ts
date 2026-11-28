@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { assignment, criterion, meetingNote, task, taskCriterion, teamLink, teamMember, teamStream } from "@/db/schema";
+import { assignment, criterion, meetingNote, task, taskCriterion, team, teamLink, teamMember, teamStream } from "@/db/schema";
 import { sendPendingAssignments } from "@/lib/buzz";
 import { can } from "@/lib/hive-perms";
 import { requireUser } from "@/lib/session";
@@ -153,4 +153,29 @@ export async function setLinkMeta(linkId: string, patch: { pinned?: boolean; cat
   if (patch.category !== undefined) set.category = VAULT_CATEGORIES.includes(String(patch.category)) ? String(patch.category) : null;
   await db.update(teamLink).set(set).where(eq(teamLink.id, linkId));
   refresh(l.teamId);
+}
+
+// ---------- custom task types ----------
+/** Add a task type of the hive's own (e.g. Research, Design, Hardware) beside Bug, Feature and Decision. */
+export async function addTaskType(teamId: string, label: string) {
+  const me = await requireUser();
+  await requirePerm(me.id, teamId, "tasks");
+  const { team: t } = await active(me.id, teamId);
+  const l = clean(label, 24);
+  if (!l) throw new Error("Name the type, e.g. Research.");
+  const all = t.taskTypes ?? [];
+  if (all.length >= 12) throw new Error("A hive can have up to 12 task types of its own.");
+  if ([...all.map((c) => c.label), "Task", "Bug", "Feature", "Decision"].some((x) => x.toLowerCase() === l.toLowerCase())) throw new Error(`There's already a ${l} type.`);
+  await db.update(team).set({ taskTypes: [...all, { id: `ct_${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`, label: l, color: SUBJECT_COLORS[all.length % SUBJECT_COLORS.length] }] }).where(eq(team.id, teamId));
+  refresh(teamId);
+}
+
+/** Remove a custom type. Its tasks stay and become plain tasks. */
+export async function deleteTaskType(teamId: string, id: string) {
+  const me = await requireUser();
+  await requirePerm(me.id, teamId, "tasks");
+  const { team: t } = await active(me.id, teamId);
+  await db.update(team).set({ taskTypes: (t.taskTypes ?? []).filter((c) => c.id !== id) }).where(eq(team.id, teamId));
+  await db.update(task).set({ type: "task" }).where(and(eq(task.teamId, teamId), eq(task.type, String(id))));
+  refresh(teamId);
 }

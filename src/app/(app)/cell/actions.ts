@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { assignment, checklistItem, goal, subject, task, taskLink, teamMember, teamStream, testRun } from "@/db/schema";
+import { team, assignment, checklistItem, goal, subject, task, taskLink, teamMember, teamStream, testRun } from "@/db/schema";
 import { newToken } from "@/lib/tokens";
 import { requirePerm, teamAccess } from "@/lib/teams";
 import { can } from "@/lib/hive-perms";
@@ -42,7 +42,8 @@ async function ownSubject(userId: string, id: string | null | undefined) {
 
 /** Bug / Feature / Decision details for a team task. A linked test run must belong to the same hive. */
 async function devFields(teamId: string, doc: TaskDoc) {
-  const type = (["task", "bug", "feature", "decision"] as const).find((t) => t === doc.type) ?? "task";
+  const [tm] = await db.select({ types: team.taskTypes }).from(team).where(eq(team.id, teamId));
+  const type = ["task", "bug", "feature", "decision", ...(tm?.types ?? []).map((c) => c.id)].find((t) => t === doc.type) ?? "task";
   let testRunId: string | null = null;
   if (type === "bug" && doc.testRunId) {
     const [r] = await db.select({ id: testRun.id }).from(testRun).where(and(eq(testRun.id, String(doc.testRunId)), eq(testRun.teamId, teamId)));
@@ -171,7 +172,7 @@ export type TaskDoc = {
   subjectId?: string | null; // personal tasks only
   isExam?: boolean;
   howTo?: unknown; // team tasks: "How to do it"
-  type?: "task" | "bug" | "feature" | "decision"; severity?: string | null; steps?: string | null; testRunId?: string | null; decision?: string | null; rationale?: string | null; streamId?: string | null; // team dev tasks
+  type?: string; severity?: string | null; steps?: string | null; testRunId?: string | null; decision?: string | null; rationale?: string | null; streamId?: string | null; // team dev tasks
   assignees?: string[]; // team tasks: roster member ids
 };
 

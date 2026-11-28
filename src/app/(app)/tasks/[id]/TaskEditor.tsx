@@ -18,7 +18,7 @@ const STATUS: { id: TaskDoc["status"]; label: string; team?: boolean }[] = [
   { id: "todo", label: "To do" }, { id: "doing", label: "In progress" }, { id: "review", label: "Needs review", team: true }, { id: "done", label: "Done" },
 ];
 
-type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; canApprove: boolean; members: { id: string; name: string }[]; done: string[]; notified: string[] };
+type TeamCtx = { id: string; name: string; color: string; importanceColors: Record<string, string> | null; taskTypes?: { id: string; label: string; color: string }[]; canApprove: boolean; members: { id: string; name: string }[]; done: string[]; notified: string[] };
 
 export function TaskEditor({ id, initial, goals, team, extras, subjects = [], runs = [], streams = [] }: { id: string; initial: TaskDoc; goals: { id: string; title: string; level: string }[]; team: TeamCtx | null; extras: Extras | null; subjects?: { id: string; code: string; color: string }[]; runs?: { id: string; label: string }[]; streams?: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -167,7 +167,7 @@ export function TaskEditor({ id, initial, goals, team, extras, subjects = [], ru
             <dt className="self-center text-sm text-muted">Type</dt>
             <dd>
               <div role="radiogroup" aria-label="Type" className="flex flex-wrap gap-2">
-                {([["task", "Task"], ["bug", "Bug"], ["feature", "Feature"], ["decision", "Decision"]] as const).map(([v, l]) => (
+                {([["task", "Task"], ["bug", "Bug"], ["feature", "Feature"], ["decision", "Decision"], ...(team.taskTypes ?? []).map((c) => [c.id, c.label])] as [string, string][]).map(([v, l]) => (
                   <button key={v} type="button" role="radio" aria-checked={(doc.type ?? "task") === v} onClick={() => update({ type: v })} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium aria-checked:border-accent-edge aria-checked:bg-raised">{l}</button>
                 ))}
               </div>

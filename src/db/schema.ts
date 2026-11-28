@@ -102,6 +102,7 @@ export const team = pgTable("team", {
   digestDay: smallint("digest_day").notNull().default(1), // 0 = Sunday
   joinCode: text("join_code").unique(), // shareable join link; null = switched off
   importanceColors: jsonb("importance_colors").$type<Record<string, string>>(), // overrides for Low/Medium/High
+  taskTypes: jsonb("task_types").$type<{ id: string; label: string; color: string }[]>().notNull().default([]), // the hive's own task types, beside Bug/Feature/Decision
   colonyId: text("colony_id").references((): AnyPgColumn => colony.id, { onDelete: "set null" }), // a Swarm inside a class
   kind: text("kind").$type<"blank" | "hackathon" | "competition" | "project">().notNull().default("blank"), // the template it started from
   archivedAt: timestamp("archived_at", { withTimezone: true }), // finished hives become read-only
@@ -125,7 +126,7 @@ export const task = pgTable("task", {
   subjectId: text("subject_id").references((): AnyPgColumn => subject.id, { onDelete: "set null" }), // personal tasks: e.g. "ASE 111"
   isExam: boolean("is_exam").notNull().default(false), // pinned as a countdown in My Cell
   doneAt: timestamp("done_at", { withTimezone: true }), // when it was finished (feeds Nectar)
-  type: text("type").$type<"task" | "bug" | "feature" | "decision">().notNull().default("task"), // team tasks
+  type: text("type").notNull().default("task"), // team tasks: task, bug, feature, decision, or a custom type id (ct_…)
   severity: text("severity").$type<"low" | "medium" | "high" | "critical">(), // bugs
   steps: text("steps"), // bugs: steps to reproduce
   testRunId: text("test_run_id").references((): AnyPgColumn => testRun.id, { onDelete: "set null" }), // bugs: the run that showed it

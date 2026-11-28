@@ -116,10 +116,10 @@ function TemplatePicker({ kind, onKind, milestones, onMilestones }: { kind: Kind
         ))}
       </div>
       {kind === "hackathon" && (
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
-          <label className="grid gap-1 text-sm"><span>Kickoff</span><input type="date" value={start} onChange={(e) => { setStart(e.target.value); replan(kind, { start: e.target.value }); }} className={fieldCls} /></label>
-          <label className="grid gap-1 text-sm"><span>Time</span><input type="time" value={startTime} onChange={(e) => { setStartTime(e.target.value); replan(kind, { startTime: e.target.value }); }} className={fieldCls} /></label>
-          <label className="grid gap-1 text-sm"><span>Length</span><select value={hours} onChange={(e) => { setHours(Number(e.target.value)); replan(kind, { hours: Number(e.target.value) }); }} className={fieldCls}>{[24, 36, 48, 72].map((h) => <option key={h} value={h}>{h} hours</option>)}</select></label>
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <label className="grid gap-1 text-sm"><span>Kickoff</span><input type="date" value={start} onChange={(e) => { setStart(e.target.value); replan(kind, { start: e.target.value }); }} className={`${fieldCls} compact-dt`} /></label>
+          <label className="grid gap-1 text-sm"><span>Time</span><input type="time" value={startTime} onChange={(e) => { setStartTime(e.target.value); replan(kind, { startTime: e.target.value }); }} className={`${fieldCls} compact-dt`} /></label>
+          <label className="col-span-2 grid gap-1 text-sm sm:col-span-1"><span>Length</span><select value={hours} onChange={(e) => { setHours(Number(e.target.value)); replan(kind, { hours: Number(e.target.value) }); }} className={fieldCls}>{[24, 36, 48, 72].map((h) => <option key={h} value={h}>{h} hours</option>)}</select></label>
         </div>
       )}
       {kind === "competition" && (
@@ -134,11 +134,13 @@ function TemplatePicker({ kind, onKind, milestones, onMilestones }: { kind: Kind
       {milestones.length > 0 && (
         <ol className="grid grid-cols-[minmax(0,1fr)] gap-2" aria-label="Milestones">
           {milestones.map((m, i) => (
-            <li key={i} className={`grid gap-1.5 ${m.time !== null ? "grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]" : "grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]"}`}>
-              <input aria-label={`Milestone ${i + 1}`} value={m.title} onChange={(e) => set(i, { title: e.target.value })} maxLength={120} className={fieldCls} />
-              <input aria-label={`${m.title} date`} type="date" value={m.date} onChange={(e) => set(i, { date: e.target.value })} className={fieldCls} />
-              {m.time !== null && <input aria-label={`${m.title} time`} type="time" value={m.time} onChange={(e) => set(i, { time: e.target.value })} className={fieldCls} />}
-              <button type="button" aria-label={`Remove ${m.title}`} onClick={() => onMilestones(milestones.filter((_, j) => j !== i))} className="grid size-11 place-items-center rounded-[var(--radius)] border border-line text-muted hover:border-danger hover:text-danger">×</button>
+            <li key={i} className={`grid gap-1.5 rounded-[var(--radius)] border border-line p-2 ${m.time !== null ? "grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]" : "grid-cols-[minmax(0,1fr)]"}`}>
+              <div className="col-span-full flex gap-1.5">
+                <input aria-label={`Milestone ${i + 1}`} placeholder="Milestone name" value={m.title} onChange={(e) => set(i, { title: e.target.value })} maxLength={120} className={`${fieldCls} min-w-0 flex-1`} />
+                <button type="button" aria-label={`Remove ${m.title}`} onClick={() => onMilestones(milestones.filter((_, j) => j !== i))} className="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] border border-line text-muted hover:border-danger hover:text-danger">×</button>
+              </div>
+              <input aria-label={`${m.title} date`} type="date" value={m.date} onChange={(e) => set(i, { date: e.target.value })} className={`${fieldCls} compact-dt`} />
+              {m.time !== null && <input aria-label={`${m.title} time`} type="time" value={m.time} onChange={(e) => set(i, { time: e.target.value })} className={`${fieldCls} compact-dt`} />}
             </li>
           ))}
         </ol>
