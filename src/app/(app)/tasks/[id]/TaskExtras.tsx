@@ -67,7 +67,7 @@ function Subtasks({ taskId, members, subtasks, me }: { taskId: string; members: 
         })}
       </ul>
       {me.canEdit && (
-        <form className="mt-3 grid gap-2 rounded-[var(--radius)] border border-dashed border-line p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto]" onSubmit={(e) => {
+        <form className="mt-3 grid gap-2 rounded-[var(--radius)] border border-dashed border-line p-3 grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,11rem)_auto]" onSubmit={(e) => {
           e.preventDefault();
           const form = e.currentTarget, f = new FormData(form);
           run(async () => { await addSubtask(taskId, { title: String(f.get("title")), ownerId: String(f.get("owner")), date: String(f.get("date")) }); form.reset(); });

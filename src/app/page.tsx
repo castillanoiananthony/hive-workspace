@@ -1,3 +1,4 @@
+import { Reveal } from "@/components/app/Reveal";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Bee } from "@/components/brand/Bee";
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   description: "Keep your goals visible. Let the team reminders send themselves. Free and ad-free, made for Filipino students, groups and orgs.",
 };
 
-const primary = "inline-flex min-h-12 items-center justify-center rounded-[var(--radius)] bg-accent px-6 font-semibold text-on-accent shadow-[0_10px_30px_-12px_var(--accent)] hover:bg-accent-hover";
+const primary = "inline-flex min-h-12 items-center justify-center rounded-[var(--radius)] bg-accent px-6 font-semibold text-on-accent hover:bg-accent-hover";
 const outline = "inline-flex min-h-12 items-center justify-center rounded-[var(--radius)] border border-line px-6 font-semibold hover:border-accent-edge";
 
 // Signed-in visitors never see this: src/proxy.ts sends them to /home.
@@ -17,7 +18,7 @@ export default function Landing() {
   return (
     <div className="relative overflow-x-clip">
       <div aria-hidden className="honeycomb honeycomb-layer" />
-      <header className="sticky top-0 z-30 border-b border-line/60 bg-bg/75 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-line/60 bg-bg">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3 sm:px-8">
           <Link href="/" aria-label="HIVE-WORKSPACE home page" className="inline-flex min-h-12 items-center"><span className="whitespace-nowrap sm:hidden"><Logo size={22} /></span><span className="hidden sm:inline"><Logo size={34} /></span></Link>
           <nav aria-label="Account" className="flex gap-2">
@@ -30,21 +31,21 @@ export default function Landing() {
       <main className="relative">
         <section className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-5 pt-14 pb-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:pt-20">
           <div>
-            <h1 className="font-display text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.01em] sm:text-6xl">
+            <h1 className="rise font-display text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.01em] sm:text-6xl">
               Keep your goals visible. Let the team reminders send themselves.
             </h1>
-            <p className="mt-6 max-w-[52ch] text-lg text-muted">
+            <p className="rise mt-6 max-w-[52ch] text-lg text-muted" style={{ "--i": 1 } as React.CSSProperties}>
               HIVE-WORKSPACE is a free, ad-free planner for Filipino students: your own goals for the sem, plus group work where everyone
               gets their part by email, and nobody has to chase the GC.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="rise mt-8 flex flex-wrap gap-3" style={{ "--i": 2 } as React.CSSProperties}>
               <Link href="/signup" className={primary}>Sign up, it&apos;s free</Link>
               <Link href="/signin" className={outline}>Sign in</Link>
               <Link href="/demo" className={`${outline} border-accent-edge/70 text-accent-text hover:bg-accent/10`}>Try a demo hive</Link>
             </div>
           </div>
-          <div className="relative mx-auto w-full max-w-md">
-            <Bee pose="wave" size={88} animate className="absolute bottom-0 left-0 z-10 hidden sm:block" />
+          <div className="rise relative mx-auto w-full max-w-md" style={{ "--i": 3 } as React.CSSProperties}>
+            <Bee pose="wave" size={88} className="absolute bottom-0 left-0 z-10 hidden sm:block" />
             <HeroVisual />
           </div>
         </section>
@@ -68,19 +69,18 @@ export default function Landing() {
 
         <section aria-labelledby="who-h" className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
           <h2 id="who-h" className="font-display text-3xl font-semibold sm:text-4xl">Made for how school actually works</h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <Reveal className="mt-8 grid gap-4 md:grid-cols-3">
             {[
               ["For students", "Plan the sem by goals, not just a to-do list. Prelims, midterms and finals stop sneaking up on you.", "cell"],
               ["For teams and orgs", "Group projects and org events where every member knows their part, their deadline and the links they need.", "hive"],
-              ["For teachers", "Class mode is coming: one join code, groups inside the class, and a dashboard of every group's progress.", "soon"],
-            ].map(([t, d, k]) => (
+              ["For teachers", "Class mode: one join code for the class, groups inside it, and one page showing every group's progress.", "colony"],
+            ].map(([t, d]) => (
               <article key={t} className="rounded-[calc(var(--radius)*2)] border border-line bg-surface p-6">
                 <h3 className="font-display text-xl font-semibold">{t}</h3>
                 <p className="mt-2 text-muted">{d}</p>
-                {k === "soon" && <p className="mt-4 inline-block rounded-full border border-accent-edge/60 px-3 py-1 text-sm font-medium text-accent-text">Coming soon</p>}
               </article>
             ))}
-          </div>
+          </Reveal>
         </section>
 
         <section className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
@@ -116,11 +116,11 @@ function Feature({ id, title, lead, points, flip = false, children }: { id: stri
   return (
     <section aria-labelledby={`${id}-h`} className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
       <div className={flip ? "lg:order-2" : undefined}>
-        <h2 id={`${id}-h`} className="font-display text-3xl font-semibold text-accent-text sm:text-4xl">{title}</h2>
+        <h2 id={`${id}-h`} className="font-display text-3xl font-semibold sm:text-4xl">{title}</h2>
         <p className="mt-3 max-w-[48ch] text-lg">{lead}</p>
-        <ul className="mt-5 grid gap-2">
+        <Reveal as="ul" className="mt-5 grid gap-2">
           {points.map((p) => <li key={p} className="flex gap-3 text-muted"><span aria-hidden className="mt-2 size-2 shrink-0 rotate-45 rounded-[2px] bg-accent" />{p}</li>)}
-        </ul>
+        </Reveal>
       </div>
       <div className={`mx-auto w-full max-w-md ${flip ? "lg:order-1" : ""}`}>{children}</div>
     </section>

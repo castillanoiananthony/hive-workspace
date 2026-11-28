@@ -167,7 +167,7 @@ export function TaskEditor({ id, initial, goals, team, extras, subjects = [], ru
             <dt className="self-center text-sm text-muted">Type</dt>
             <dd>
               <div role="radiogroup" aria-label="Type" className="flex flex-wrap gap-2">
-                {([["task", "Task"], ["bug", "🐞 Bug"], ["feature", "✨ Feature"], ["decision", "⚖ Decision"]] as const).map(([v, l]) => (
+                {([["task", "Task"], ["bug", "Bug"], ["feature", "Feature"], ["decision", "Decision"]] as const).map(([v, l]) => (
                   <button key={v} type="button" role="radio" aria-checked={(doc.type ?? "task") === v} onClick={() => update({ type: v })} className="min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm font-medium aria-checked:border-accent-edge aria-checked:bg-raised">{l}</button>
                 ))}
               </div>

@@ -42,7 +42,7 @@ export function TaskList({ tasks, goals, tz, subjects = [] }: { tasks: (TaskView
         <button type="button" disabled={pending} onClick={() => start(() => newTask())} className="min-h-11 rounded-[var(--radius)] bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover">New task</button>
       </div>
 
-      <div role="search" className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
+      <div role="search" className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,12rem))]">
         <label className="sr-only" htmlFor="q">Search tasks</label>
         <input id="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks" className={field} />
         <label className="sr-only" htmlFor="f-status">Status</label>

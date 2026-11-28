@@ -26,7 +26,7 @@ export function Standups({ team, me, members, notes, tasks, tz }: { team: TeamT;
     catch (e) { setMsg(e instanceof Error ? e.message : "Couldn't save."); }
   });
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <BusyOverlay show={pending} label="Saving the notes…" />
       {canWrite ? (
         <section aria-labelledby="sn-h" className={`${card} grid content-start gap-3`}>

@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Demo hive", description: "A read-onl
 export default function DemoPage() {
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-line/60 bg-bg/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-line/60 bg-bg">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-3 sm:px-8">
           <Link href="/" aria-label="HIVE-WORKSPACE home page" className="inline-flex min-h-11 items-center"><span className="whitespace-nowrap sm:hidden"><Logo size={22} /></span><span className="hidden sm:inline"><Logo size={30} /></span></Link>
           <Link href="/signup" className="inline-flex min-h-11 items-center rounded-[var(--radius)] bg-accent px-4 font-semibold whitespace-nowrap text-on-accent hover:bg-accent-hover">Sign up free</Link>

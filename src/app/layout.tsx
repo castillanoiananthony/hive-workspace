@@ -1,3 +1,4 @@
+import { FieldHints } from "@/components/app/FieldHints";
 import type { Metadata, Viewport } from "next";
 import { Gabarito, Manrope } from "next/font/google";
 import { DEFAULT_THEME, themeVars } from "@/lib/themes";
@@ -24,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">{children}<FieldHints /></body>
     </html>
   );
 }

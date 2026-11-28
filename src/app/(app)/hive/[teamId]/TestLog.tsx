@@ -54,7 +54,7 @@ export function TestLog({ team, me, members, fields, runs }: { team: TeamT; me: 
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <section aria-labelledby="runs-h" className={`${card} relative overflow-x-auto`}>
           <h2 id="runs-h" className="font-display text-lg font-semibold">Runs</h2>
           {runs.length === 0 ? <p className="mt-2 text-sm text-muted">No runs yet. Log every test, build or attempt so you can see what got better.</p> : (

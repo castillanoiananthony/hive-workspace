@@ -73,12 +73,12 @@ export function SidebarView({ path, me }: { path: string; me: Me | null }) {
       <Link href="/home" className="mb-8 px-3 whitespace-nowrap"><Logo size={26} /></Link>
       <nav aria-label="Main" className="grid gap-1">{MAIN.map((i) => <NavLink key={i.href} item={i} path={path} />)}</nav>
       <nav aria-label="Help and settings" className="mt-6 grid gap-1 border-t border-line pt-6">{MORE.map((i) => <NavLink key={i.href} item={i} path={path} />)}</nav>
-      <div className="mt-auto grid gap-2">
+      <div className="mt-auto grid grid-cols-[minmax(0,1fr)] gap-2">
         {me && (
           <Link href="/profile" aria-current={active(path, "/profile") ? "page" : undefined}
-            className={`flex min-h-14 items-center gap-3 rounded-[var(--radius)] px-3 py-2 ${active(path, "/profile") ? "bg-raised" : "hover:bg-raised"}`}>
+            className={`flex min-h-14 min-w-0 items-center gap-3 rounded-[var(--radius)] px-3 py-2 ${active(path, "/profile") ? "bg-raised" : "hover:bg-raised"}`}>
             <Avatar me={me} size={36} />
-            <span className="min-w-0"><span className="block truncate font-medium">{me.name || "Your profile"}</span><span className="block text-sm text-muted">View profile</span></span>
+            <span className="min-w-0 flex-1"><span className="block truncate font-medium">{me.name || "Your profile"}</span><span className="block text-sm text-muted">View profile</span></span>
           </Link>
         )}
         <Link href="/developer" className="px-3 text-sm text-muted hover:text-ink">Meet the developer</Link>
@@ -89,7 +89,7 @@ export function SidebarView({ path, me }: { path: string; me: Me | null }) {
 
 export function BottomNavView({ path, me = null }: { path: string; me?: Me | null }) {
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line/70 bg-surface/80 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_32px_-20px_rgb(0_0_0/0.6)] backdrop-blur-xl md:hidden">
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
       {MOBILE.map((i) => {
         const on = active(path, i.href) || (i.href === "/profile" && active(path, "/tutorial"));
         return (

@@ -33,7 +33,7 @@ export function HomeFeed({ me, tz, feed, upcoming, teams, life, open }: { me: Me
 
   return (
     <SubjectsContext.Provider value={life.subjects}>
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="mx-auto w-full max-w-2xl min-w-0">
         <h1 className="sr-only">Home</h1>
         <TourCard />

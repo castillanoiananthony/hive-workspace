@@ -71,7 +71,6 @@ export function TeamView(props: Props) {
           {leader && <button type="button" onClick={() => setArchived(team.id, false)} className="min-h-10 rounded-[var(--radius)] border border-accent-edge/70 px-3 text-sm font-medium text-accent-text hover:bg-accent/10">Bring it back</button>}
         </div>
       )}
-      <WorkingNow team={team} me={me} members={members} />
       {props.colonyInfo && (
         <div className="mt-6 flex flex-wrap items-center gap-2 rounded-[calc(var(--radius)*2)] border border-line bg-surface px-4 py-3 text-sm">
           <span className="text-muted">Swarm in <Link href={`/colony/${props.colonyInfo.id}`} className="font-medium text-ink underline underline-offset-4">{props.colonyInfo.name}</Link>.</span>
@@ -82,11 +81,12 @@ export function TeamView(props: Props) {
       <div role="tablist" aria-label="Team sections" className="relative mt-8 -mx-1 flex gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 [scrollbar-width:none]">
         {tabs.map((t) => (
           <button key={t.id} type="button" role="tab" id={`tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`panel-${t.id}`} onClick={() => setTab(t.id)}
-            className="min-h-10 shrink-0 rounded-full px-4 font-medium whitespace-nowrap text-muted hover:text-ink aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-on-accent aria-selected:shadow-[0_6px_18px_-8px_var(--accent)]">{t.label}</button>
+            className="min-h-10 shrink-0 rounded-full px-4 font-medium whitespace-nowrap text-muted hover:text-ink aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-on-accent">{t.label}</button>
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-6">
         {tab === "tests" && <TestLog team={team} me={me} members={members} fields={props.testFields ?? []} runs={props.testRuns ?? []} />}
+        {tab === "comb" && <WorkingNow team={team} me={me} members={members} />}
         {tab === "plan" && <Plan team={team} me={me} members={members} milestones={props.hiveMilestones ?? []} checklists={props.checklists ?? []} criteria={props.criteria ?? []} tasks={tasks} />}
         {tab === "standups" && <Standups team={team} me={me} members={members} notes={props.notes ?? []} tasks={tasks} tz={props.tz} />}
         {tab === "comb" && <><Countdown milestones={props.hiveMilestones ?? []} hourly={team.kind === "hackathon"} /></>}
@@ -218,8 +218,8 @@ function Settings({ team, me, roles, members }: { team: Team; me: MeT; roles: Ro
   const [pending, start] = useTransition();
   const [deleting, setDeleting] = useState(false);
   return (
-    <div className="grid max-w-2xl gap-10">
-      {has(me, "settings") && <form className="grid gap-4" onSubmit={(e) => {
+    <div className="grid max-w-2xl grid-cols-[minmax(0,1fr)] gap-10">
+      {has(me, "settings") && <form className="grid grid-cols-[minmax(0,1fr)] gap-4" onSubmit={(e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
         start(async () => {

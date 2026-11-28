@@ -43,19 +43,9 @@ body { font-family: var(--font-sans); font-size: 1rem; line-height: 1.55; -webki
 .honeycomb-layer { position: absolute; inset: 0; pointer-events: none; opacity: 0.04; }
 [style*="color-scheme: light"] .honeycomb-layer { filter: invert(1); opacity: 0.06; }
 
-/* Bee motion: a slow float and a quick, small wing flutter. Off when the user asks for less motion. */
-@keyframes bee-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes wing-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
-@keyframes wing-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(14deg); } }
-.bee-float { animation: bee-float 2.8s ease-in-out infinite; }
-.bee-wing-l { animation: wing-l 0.18s ease-in-out infinite; }
-.bee-wing-r { animation: wing-r 0.18s ease-in-out infinite; }
-.hex-fill { transition: y 600ms cubic-bezier(0.22, 1, 0.36, 1), height 600ms cubic-bezier(0.22, 1, 0.36, 1); }
-
-@media (prefers-reduced-motion: reduce) {
-  .bee-float, .bee-wing-l, .bee-wing-r { animation: none; }
-  .hex-fill { transition: none; }
-}
+/* Progress hexes fill smoothly when a value changes (motion that answers an action). */
+.hex-fill { transition: y 300ms cubic-bezier(0.22, 1, 0.36, 1), height 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) { .hex-fill { transition: none; } }
 
 /* Task notes (Tiptap): readable document text, not a form field */
 .task-notes { min-height: 8rem; outline: none; line-height: 1.65; }
@@ -130,17 +120,57 @@ dialog.modal[open] { animation: modal-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1); }
 @keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
 @media (prefers-reduced-motion: reduce) { .busy-overlay, dialog.modal[open] { animation: none; } }
 
-/* ---------- modern polish: depth, motion, glass ---------- */
-@layer components {
-  /* every surface card gets a soft lift instead of a flat outline */
-  [class*="bg-surface"][class*="border-line"] { box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 12px 32px -24px rgb(0 0 0 / 0.55); }
-  [style*="color-scheme: light"] [class*="bg-surface"][class*="border-line"] { box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 28px -22px rgb(0 0 0 / 0.25); }
+/* ---------- interaction: quick, quiet feedback ---------- */
+button, a, summary, input, select, textarea { transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out, opacity 150ms ease-out; }
+button:not(:disabled):active, a[class*="rounded"]:active, summary:active { transform: scale(0.97); }
+dialog::backdrop { background: rgb(0 0 0 / 0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; border-color: var(--accent-edge); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+@media (hover: none) { button, a { -webkit-tap-highlight-color: transparent; } }
+
+/* ---------- form controls: one look everywhere ---------- */
+/* Dropdowns: our own chevron with room to breathe, never wider than their box. */
+select {
+  appearance: none; -webkit-appearance: none; min-width: 0; max-width: 100%; text-overflow: ellipsis;
+  padding-right: 2.5rem; background-repeat: no-repeat; background-position: right 0.85rem center; background-size: 1rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a2aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
-button, a, summary, input, select, textarea { transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, transform 120ms; }
-button:not(:disabled):active, a[class*="border"]:active { transform: scale(0.97); }
-dialog::backdrop { background: rgb(0 0 0 / 0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
-@media (prefers-reduced-motion: reduce) { button, a, summary { transition: none; } button:not(:disabled):active, a[class*="border"]:active { transform: none; } }
+select[multiple] { background-image: none; padding-right: 0.75rem; }
+/* Date and time: a calendar or clock icon on the left, the whole box opens the picker, and an empty box says what it's for. */
+input[type="date"], input[type="time"], input[type="datetime-local"] {
+  appearance: none; -webkit-appearance: none; position: relative; min-width: 0; max-width: 100%; text-align: left;
+  padding-left: 2.6rem; background-repeat: no-repeat; background-position: left 0.85rem center; background-size: 1.1rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a2aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4.5' width='18' height='17' rx='2.5'/%3E%3Cpath d='M3 9.5h18M8 2.5v4M16 2.5v4'/%3E%3C/svg%3E");
+}
+input[type="time"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a2aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E"); }
+input::-webkit-date-and-time-value { text-align: left; min-height: 1.5em; }
+input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; opacity: 0; cursor: pointer; }
+input[data-empty]::-webkit-datetime-edit { color: var(--text-muted); }
+/* Phones show a blank box for an empty date; FieldHints marks it data-empty and the words appear here. */
+@media (pointer: coarse) {
+  input[data-empty][type="date"], input[data-empty][type="datetime-local"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a2aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4.5' width='18' height='17' rx='2.5'/%3E%3Cpath d='M3 9.5h18M8 2.5v4M16 2.5v4'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='24'%3E%3Ctext x='0' y='17' font-family='system-ui,sans-serif' font-size='16' fill='%23a3a2aa'%3EPick a date%3C/text%3E%3C/svg%3E"); background-position: left 0.85rem center, left 2.6rem center; background-size: 1.1rem, 140px 24px; }
+  input[data-empty][type="time"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a2aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='24'%3E%3Ctext x='0' y='17' font-family='system-ui,sans-serif' font-size='16' fill='%23a3a2aa'%3EPick a time%3C/text%3E%3C/svg%3E"); background-position: left 0.85rem center, left 2.6rem center; background-size: 1.1rem, 140px 24px; }
+}
+[style*="color-scheme: light"] select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366656d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+[style*="color-scheme: light"] input[type="date"], [style*="color-scheme: light"] input[type="datetime-local"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366656d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4.5' width='18' height='17' rx='2.5'/%3E%3Cpath d='M3 9.5h18M8 2.5v4M16 2.5v4'/%3E%3C/svg%3E"); }
+[style*="color-scheme: light"] input[type="time"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366656d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E"); }
+input[type="color"] { padding: 0.25rem; }
+
+/* ---------- motion: three places only ---------- */
+/* 1. Page entrance: headline, then copy, then actions, each rising 12px. */
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+.rise { animation: rise 280ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+/* 2. Lists and cards reveal once as they scroll in (armed by <Reveal>, so nothing hides without JavaScript). */
+[data-reveal="armed"] > * { opacity: 0; transform: translateY(12px); }
+[data-reveal="in"] > * { animation: rise 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+[data-reveal="in"] > :nth-child(2) { animation-delay: 50ms; } [data-reveal="in"] > :nth-child(3) { animation-delay: 100ms; }
+[data-reveal="in"] > :nth-child(4) { animation-delay: 150ms; } [data-reveal="in"] > :nth-child(n+5) { animation-delay: 200ms; }
+/* 3. Press feedback is the scale(0.97) above. */
+@media (prefers-reduced-motion: reduce) {
+  button, a, summary { transition: none; }
+  button:not(:disabled):active, a[class*="rounded"]:active, summary:active { transform: none; }
+  .rise, [data-reveal="in"] > * { animation: none; }
+  [data-reveal="armed"] > * { opacity: 1; transform: none; }
+}
 
 /* printing a contribution log: only the log, black on white */
 @media print {

@@ -47,7 +47,7 @@ export function Plan({ team, me, members, milestones, checklists, criteria = [],
   const owners = members.filter((m) => (m.access ?? "member") === "member");
   const nm = (id: string | null) => { const m = members.find((x) => x.id === id); return m ? nameOf(m) : null; };
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <section aria-labelledby="ms-h" className={card}>
         <h2 id="ms-h" className="font-display text-lg font-semibold">Milestones</h2>
         {milestones.length === 0 && <p className="mt-2 text-sm text-muted">No milestones yet.{edit ? " Add the checkpoints you're working towards." : ""}</p>}
@@ -81,7 +81,7 @@ export function Plan({ team, me, members, milestones, checklists, criteria = [],
         )}
       </section>
 
-      <div className="grid content-start gap-6">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
         {checklists.map((c) => {
           const done = c.items.filter((i) => ticks[i.id] ?? i.done).length;
           return (
@@ -100,7 +100,7 @@ export function Plan({ team, me, members, milestones, checklists, criteria = [],
                       {edit ? (
                         <>
                           <label className="sr-only" htmlFor={`own-${i.id}`}>Owner of {i.text}</label>
-                          <select id={`own-${i.id}`} value={i.ownerId ?? ""} disabled={pending} onChange={(e) => run(() => updateChecklistItem(i.id, { ownerId: e.target.value }))} className={`${field} min-h-9 text-sm`}>
+                          <select id={`own-${i.id}`} value={i.ownerId ?? ""} disabled={pending} onChange={(e) => run(() => updateChecklistItem(i.id, { ownerId: e.target.value }))} className={`${field} min-h-9 max-w-48 text-sm`}>
                             <option value="">No owner</option>{owners.map((m) => <option key={m.id} value={m.id}>{nameOf(m)}</option>)}
                           </select>
                           <button type="button" aria-label={`Remove ${i.text}`} disabled={pending} onClick={() => run(() => deleteChecklistItem(i.id))} className="grid size-9 place-items-center rounded-full border border-line text-muted hover:text-danger">×</button>

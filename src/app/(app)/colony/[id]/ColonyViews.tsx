@@ -165,7 +165,7 @@ function StudentsTab({ students }: { students: Student[] }) {
 function MilestonesTab({ id, items }: { id: string; items: Milestone[] }) {
   const { pending, msg, run } = useRun();
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <section className={card}><h2 className="font-display mb-3 text-lg font-semibold">Checkpoints</h2>
         <Milestones items={items} />
         {items.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{items.map((m) => <button key={m.id} type="button" disabled={pending} onClick={() => { if (confirm(`Remove the milestone “${m.title}”?`)) run(() => deleteMilestone(m.id)); }} className={`${outline} min-h-9 px-3 text-sm hover:border-danger hover:text-danger`}>Remove “{m.title}”</button>)}</div>}
@@ -216,7 +216,7 @@ function AnnounceTab({ id, posts, students }: { id: string; posts: Post[]; stude
   const { pending, msg, run } = useRun();
   const [body, setBody] = useState("");
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <form className={`${card} grid content-start gap-3`} onSubmit={(e) => { e.preventDefault(); run(async () => { const r = await announce(id, body); setBody(""); return r; }, (r) => { const x = r as { swarms: number; emailed: number; skipped: number }; return `Posted to ${x.swarms} swarms and emailed ${x.emailed} ${x.emailed === 1 ? "student" : "students"}.${x.skipped ? ` ${x.skipped} more will see it in the app (daily email limit).` : ""}`; }); }}>
         <BusyOverlay show={pending} label="Sending the announcement…" />
         <h2 className="font-display text-lg font-semibold">New announcement</h2>

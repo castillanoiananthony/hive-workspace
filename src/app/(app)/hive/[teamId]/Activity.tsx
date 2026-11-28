@@ -27,7 +27,7 @@ export function Activity({ team, tasks, assigned, members, days, logs, tz, contr
           <div key={k} className="rounded-[calc(var(--radius)*2)] border border-line bg-surface px-4 py-3"><dt className="text-sm text-muted">{k}</dt><dd className="font-display text-3xl font-semibold tabular-nums">{v}</dd></div>
         ))}
       </dl>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <section aria-labelledby="pie-h" className={card}>
           <h2 id="pie-h" className="font-display text-lg font-semibold">Where the tasks stand</h2>
           <Donut parts={status.map((s) => ({ label: LABEL[s.k], n: s.n, color: C[s.k] }))} />

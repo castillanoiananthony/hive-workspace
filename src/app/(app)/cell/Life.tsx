@@ -120,10 +120,10 @@ function Nectar({ n }: { n: Life["nectar"] }) {
     <section aria-labelledby="nectar-h" className={card}>
       <h2 id="nectar-h" className="font-display text-lg font-semibold">Nectar</h2>
       <p className="text-sm text-muted">{n.streak > 0 ? `${n.streak}-day Nectar: you've finished something ${n.streak === 1 ? "today" : `${n.streak} days in a row`}.` : "Finish any task to start collecting Nectar."}{!n.today && n.streak > 0 ? " Today's still open." : ""}</p>
-      <ol className="mt-3 flex justify-between gap-1" aria-label="The last 7 days">
+      <ol className="mt-3 grid grid-cols-7 gap-1" aria-label="The last 7 days">
         {n.week.map((d) => (
-          <li key={d.date} className="grid justify-items-center gap-1 text-xs text-muted">
-            <svg viewBox="0 0 40 40" width="34" height="34" role="img" aria-label={`${d.date}: ${d.filled ? "finished a task" : "nothing finished"}`}>
+          <li key={d.date} className="grid min-w-0 justify-items-center gap-1 text-xs text-muted">
+            <svg viewBox="0 0 40 40" className="aspect-square w-full max-w-[34px]" role="img" aria-label={`${d.date}: ${d.filled ? "finished a task" : "nothing finished"}`}>
               <polygon points={hexPoints(20, 20, 17)} fill={d.filled ? "var(--accent)" : "var(--surface-raised)"} stroke={d.filled ? "var(--accent-edge)" : "var(--border)"} strokeWidth="2" />
             </svg>
             {label(d.date)}

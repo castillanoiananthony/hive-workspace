@@ -17,7 +17,7 @@ export function Members({ team, members, roles, me }: { team: TeamT; members: Me
   const joined = members.filter((m) => m.joined), invited = members.filter((m) => !m.joined);
   const roleName = (m: MemberT) => (m.isAdmin ? "Admin" : m.access === "adviser" ? "Adviser" : m.access === "guest" ? "Guest" : roles.find((r) => r.id === m.roleId)?.name ?? "Member");
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-8">
         <section aria-labelledby="joined-h">
           <h2 id="joined-h" className="font-display text-xl font-semibold">Members ({joined.length})</h2>
@@ -55,7 +55,7 @@ function MemberRow({ m, team, role, canManage, me }: { m: MemberT; team: TeamT; 
   const ghost = "min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-accent-edge hover:text-ink";
   const danger = "min-h-11 rounded-[var(--radius)] border border-line px-3 text-sm text-muted hover:border-danger hover:text-danger";
   return (
-    <li className="flex items-center gap-3 p-3">
+    <li className="flex items-start gap-3 p-4">
       <MemberAvatar m={m} color={team.color} size={40} />
       <div className="min-w-0 flex-1">
         {editing ? (
@@ -72,12 +72,12 @@ function MemberRow({ m, team, role, canManage, me }: { m: MemberT; team: TeamT; 
             </p>
             <p className="truncate text-sm text-muted">{role}{m.email ? `, ${m.email}` : ""}{m.unsubscribed ? ". Turned off Buzz emails" : ""}</p>
             {me.isAdmin && !m.isAdmin && (
-              <label className="mt-1 inline-flex items-center gap-2 text-sm"><span className="text-muted">Access</span>
+              <label className="mt-2 flex max-w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm"><span className="text-muted">Access</span>
                 <select value={m.access ?? "member"} disabled={pending} onChange={(e) => { const v = e.target.value as "member" | "adviser" | "guest"; start(async () => { await setMemberAccess(m.id, v); router.refresh(); }); }}
-                  className="min-h-9 rounded-[var(--radius)] border border-line bg-bg px-2 text-sm">
-                  <option value="member">Member: does the work</option>
-                  <option value="adviser">Adviser: sees all, comments</option>
-                  <option value="guest">Guest: sees tasks and The Comb</option>
+                  className="min-h-10 w-full max-w-72 min-w-0 rounded-[var(--radius)] border border-line bg-bg px-3 text-sm sm:w-auto">
+                  <option value="member">Member</option>
+                  <option value="adviser">Adviser (sees all, comments)</option>
+                  <option value="guest">Guest (tasks and The Comb)</option>
                 </select>
               </label>
             )}
